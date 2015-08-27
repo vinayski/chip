@@ -21,7 +21,7 @@ PADDED_UBOOT="$TMPDIR/padded-uboot"
 PADDED_UBOOT_SIZE=0xc0000
 UBOOT_MEM_ADDR=0x4a000000
 UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
-UBI_MEM_ADDR=0x44000000
+UBI_MEM_ADDR=0x4b000000
 UBI_SIZE=`stat --printf="%s" $UBI | xargs printf "0x%08x"`
 
 prepare_images() {
