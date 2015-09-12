@@ -1,7 +1,7 @@
 #!/bin/bash
 FW_DIR="$(pwd)/.firmware"
 FW_IMAGE_DIR="${FW_DIR}/images"
-S3_URL="https://s3-ap-northeast-1.amazonaws.com/stak-images/firmware/chip/stable/5/images"
+S3_URL="https://s3-ap-northeast-1.amazonaws.com/stak-images/firmware/chip/stable/latest"
 
 function require_directory {
 	if [[ ! -d "${1}" ]]; then
@@ -11,10 +11,28 @@ function require_directory {
 
 function cache_download {
 	if [[ ! -f "${1}/${2}" ]]; then
-		wget -P "${FW_IMAGE_DIR}" "${S3_URL}/${2}" ||
+    
+    LATEST_URL="$(wget -q -O- ${S3_URL})"
+		wget -P "${FW_IMAGE_DIR}" "${LATEST_URL}images/${2}" ||
 			exit 1
 	fi
 }
+
+
+while getopts ":u" opt; do
+  case $opt in
+    u)
+      echo "updating cache"
+      if [[ -d "$FW_IMAGE_DIR" ]]; then
+        rm -rf $FW_IMAGE_DIR
+      fi
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
 
 require_directory "${FW_IMAGE_DIR}"
 cache_download "${FW_IMAGE_DIR}" rootfs.ubi
