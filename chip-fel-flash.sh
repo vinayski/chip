@@ -1,5 +1,25 @@
 #!/bin/bash
 
+SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+
+onMac() {
+  if [ "$(uname)" == "Darwin" ]; then
+    return 0;
+  else
+    return 1;
+  fi
+}
+
+filesize() {
+  if onMac; then
+    stat -f%z $0
+  else
+    stat --printf="%s" $0
+  fi
+}
+
+FEL=fel
+
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
 NAND_ERASE_BB=false
@@ -8,7 +28,7 @@ if [ "$1" == "erase-bb" ]; then
 fi
 
 PATH=$PATH:$BUILDROOT_OUTPUT_DIR/host/usr/bin
-TMPDIR=`mktemp -d`
+TMPDIR=`mktemp -d -t chipflashXXXXXX`
 PADDED_SPL="$TMPDIR/sunxi-padded-spl"
 PADDED_SPL_SIZE=0
 UBOOT_SCRIPT="$TMPDIR/uboot.scr"
@@ -22,7 +42,8 @@ PADDED_UBOOT_SIZE=0xc0000
 UBOOT_MEM_ADDR=0x4a000000
 UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
 UBI_MEM_ADDR=0x4b000000
-UBI_SIZE=`stat --printf="%s" $UBI | xargs printf "0x%08x"`
+
+UBI_SIZE=`filesize $UBI | xargs printf "0x%08x"`
 
 prepare_images() {
 	local in=$SPL
@@ -42,11 +63,11 @@ prepare_images() {
 	dd if=/dev/urandom of=$out bs=8k count=1 seek=3 conv=sync
 	dd if=$in of=$out bs=8k count=1 skip=2 seek=4 conv=sync
 	dd if=/dev/urandom of=$out bs=8k count=1 seek=5 conv=sync
-	PADDED_SPL_SIZE=`stat --printf="%s" $out | xargs printf "0x%08x"`
+	PADDED_SPL_SIZE=`filesize $out | xargs printf "0x%08x"`
 
 	# Align the u-boot image on a page boundary
 	dd if=$UBOOT of=$PADDED_UBOOT bs=16k conv=sync
-	UBOOT_SIZE=`stat --printf="%s" $PADDED_UBOOT | xargs printf "0x%08x"`
+	UBOOT_SIZE=`filesize $PADDED_UBOOT | xargs printf "0x%08x"`
 	dd if=/dev/urandom of=$PADDED_UBOOT seek=$((UBOOT_SIZE / 0x4000)) bs=16k count=$(((PADDED_UBOOT_SIZE - UBOOT_SIZE) / 0x4000))
 }
 
@@ -83,17 +104,17 @@ prepare_images
 prepare_uboot_script
 
 echo == upload the SPL to SRAM and execute it ==
-fel spl $SPL
+${FEL} spl $SPL
 
 sleep 1 # wait for DRAM initialization to complete
 
 echo == upload images ==
-fel write $SPL_MEM_ADDR $PADDED_SPL
-fel write $UBOOT_MEM_ADDR $PADDED_UBOOT
-fel write $UBI_MEM_ADDR $UBI
-fel write $UBOOT_SCRIPT_MEM_ADDR $UBOOT_SCRIPT
+${FEL} write $SPL_MEM_ADDR $PADDED_SPL
+${FEL} write $UBOOT_MEM_ADDR $PADDED_UBOOT
+${FEL} write $UBI_MEM_ADDR $UBI
+${FEL} write $UBOOT_SCRIPT_MEM_ADDR $UBOOT_SCRIPT
 
 echo == execute the main u-boot binary ==
-fel exe $UBOOT_MEM_ADDR
+${FEL} exe $UBOOT_MEM_ADDR
 
 rm -rf $TMPDIR
