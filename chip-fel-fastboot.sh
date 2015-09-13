@@ -4,7 +4,7 @@ SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 source $SCRIPTDIR/common.sh
 
-FEL=fel
+FEL=${FEL}
 
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
@@ -78,10 +78,15 @@ prepare_uboot_script() {
 	echo "setenv bootcmd 'source \${scriptaddr}; nand slc-mode on; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> $UBOOT_SCRIPT_SRC
 	echo "saveenv" >> $UBOOT_SCRIPT_SRC
 
-	echo "nand slc-mode on" >> $UBOOT_SCRIPT_SRC
-	echo "nand write.trimffs $UBI_MEM_ADDR 0x1000000 $UBI_SIZE" >> $UBOOT_SCRIPT_SRC
-	echo "mw \${scriptaddr} 0x0" >> $UBOOT_SCRIPT_SRC
-	echo "boot" >> $UBOOT_SCRIPT_SRC
+  echo "echo going to fastboot mode" >>$UBOOT_SCRIPT_SRC
+  echo "fastboot" >>$UBOOT_SCRIPT_SRC
+  echo "echo " >>$UBOOT_SCRIPT_SRC
+  echo "echo " >>$UBOOT_SCRIPT_SRC
+  echo "echo *********************************************" >>$UBOOT_SCRIPT_SRC
+  echo "echo *****************[ SUCCESS ]*****************" >>$UBOOT_SCRIPT_SRC
+  echo "echo *********************************************" >>$UBOOT_SCRIPT_SRC
+  echo "echo " >>$UBOOT_SCRIPT_SRC
+  echo "echo " >>$UBOOT_SCRIPT_SRC
 
 	mkimage -A arm -T script -C none -n "flash CHIP" -d $UBOOT_SCRIPT_SRC $UBOOT_SCRIPT
 }
@@ -98,10 +103,15 @@ sleep 1 # wait for DRAM initialization to complete
 echo == upload images ==
 ${FEL} write $SPL_MEM_ADDR $PADDED_SPL
 ${FEL} write $UBOOT_MEM_ADDR $PADDED_UBOOT
-${FEL} write $UBI_MEM_ADDR $UBI
+
 ${FEL} write $UBOOT_SCRIPT_MEM_ADDR $UBOOT_SCRIPT
 
 echo == execute the main u-boot binary ==
 ${FEL} exe $UBOOT_MEM_ADDR
 
-rm -rf $TMPDIR
+echo == waiting for fastboot ==
+while [[ -z "$(fastboot devices)" ]]; do sleep 1; done
+fastboot -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
+fastboot continue
+
+echo "stuff is in $TMPDIR"

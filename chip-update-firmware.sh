@@ -3,6 +3,8 @@ FW_DIR="$(pwd)/.firmware"
 FW_IMAGE_DIR="${FW_DIR}/images"
 S3_URL="https://s3-ap-northeast-1.amazonaws.com/stak-images/firmware/chip/stable/latest"
 
+FLASH_SCRIPT=./chip-fel-flash.sh
+
 function require_directory {
 	if [[ ! -d "${1}" ]]; then
 		mkdir -p "${1}"
@@ -19,13 +21,17 @@ function cache_download {
 }
 
 
-while getopts ":u" opt; do
+while getopts ":u:f" opt; do
   case $opt in
     u)
       echo "updating cache"
       if [[ -d "$FW_IMAGE_DIR" ]]; then
         rm -rf $FW_IMAGE_DIR
       fi
+      ;;
+    f)
+      echo "fastboot enabled"
+      FLASH_SCRIPT=./chip-fel-fastboot.sh
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -42,4 +48,5 @@ cache_download "${FW_IMAGE_DIR}" uboot-env.bin
 cache_download "${FW_IMAGE_DIR}" zImage
 cache_download "${FW_IMAGE_DIR}" u-boot-dtb.bin
 
-BUILDROOT_OUTPUT_DIR="${FW_DIR}" ./chip-fel-flash.sh
+BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT}
+
