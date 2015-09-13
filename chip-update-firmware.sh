@@ -21,7 +21,7 @@ function cache_download {
 }
 
 
-while getopts ":u:f" opt; do
+while getopts "uf" opt; do
   case $opt in
     u)
       echo "updating cache"

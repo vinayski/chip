@@ -10,8 +10,8 @@ onMac() {
 
 filesize() {
   if onMac; then
-    stat -f%z $0
+    stat -f%z $1
   else
-    stat --printf="%s" $0
+    stat --printf="%s" $1
   fi
 }
