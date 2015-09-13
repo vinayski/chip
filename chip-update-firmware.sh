@@ -48,5 +48,5 @@ cache_download "${FW_IMAGE_DIR}" uboot-env.bin
 cache_download "${FW_IMAGE_DIR}" zImage
 cache_download "${FW_IMAGE_DIR}" u-boot-dtb.bin
 
-BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT}
-
+RETURNVAL=$(BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT})
+exit $(( ${RETURNVAL} ))
