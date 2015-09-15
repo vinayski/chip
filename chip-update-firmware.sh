@@ -14,12 +14,11 @@ function require_directory {
 function cache_download {
 	if [[ ! -f "${1}/${2}" ]]; then
     
-    LATEST_URL="$(wget -q -O- ${S3_URL})"
 		wget -P "${FW_IMAGE_DIR}" "${LATEST_URL}images/${2}" ||
 			exit 1
 	fi
 }
-
+    
 
 while getopts "uf" opt; do
   case $opt in
@@ -40,7 +39,24 @@ while getopts "uf" opt; do
   esac
 done
 
+LATEST_URL="$(wget -q -O- ${S3_URL})"
+echo "LATEST_URL=$LATEST_URL"
+if [[ -z "${LATEST_URL}" ]]; then
+      echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
+      exit 1
+fi
+
+BUILD=${LATEST_URL%%/}
+BUILD=${BUILD##*/}
+echo "BUILD=$BUILD"
+
+if [[ -z "${BUILD}" ]]; then
+  echo "error: could not extract build number from build"
+  exit 1
+fi
+
 require_directory "${FW_IMAGE_DIR}"
+echo "$BUILD" > ${FW_IMAGE_DIR}/build
 cache_download "${FW_IMAGE_DIR}" rootfs.ubi
 cache_download "${FW_IMAGE_DIR}" sun5i-r8-chip.dtb
 cache_download "${FW_IMAGE_DIR}" sunxi-spl.bin
