@@ -6,17 +6,18 @@ S3_URL="https://s3-ap-northeast-1.amazonaws.com/stak-images/firmware/chip/stable
 FLASH_SCRIPT=./chip-fel-flash.sh
 
 function require_directory {
-	if [[ ! -d "${1}" ]]; then
-		mkdir -p "${1}"
-	fi
+  if [[ ! -d "${1}" ]]; then
+    mkdir -p "${1}"
+  fi
 }
 
 function cache_download {
-	if [[ ! -f "${1}/${2}" ]]; then
+  if [[ ! -f "${1}/${2}" ]]; then
+    echo "$BUILD" > ${FW_IMAGE_DIR}/build
     
-		wget -P "${FW_IMAGE_DIR}" "${LATEST_URL}images/${2}" ||
-			exit 1
-	fi
+    wget -P "${FW_IMAGE_DIR}" "${LATEST_URL}images/${2}" ||
+      exit 1
+  fi
 }
     
 
@@ -56,7 +57,6 @@ if [[ -z "${BUILD}" ]]; then
 fi
 
 require_directory "${FW_IMAGE_DIR}"
-echo "$BUILD" > ${FW_IMAGE_DIR}/build
 cache_download "${FW_IMAGE_DIR}" rootfs.ubi
 cache_download "${FW_IMAGE_DIR}" sun5i-r8-chip.dtb
 cache_download "${FW_IMAGE_DIR}" sunxi-spl.bin
