@@ -114,5 +114,4 @@ while [[ -z "$(fastboot devices)" ]]; do sleep 1; done
 fastboot -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
 fastboot continue
 
-echo "stuff is in $TMPDIR"
-exit 0
+rm -rf ${TMPDIR}

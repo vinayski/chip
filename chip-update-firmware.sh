@@ -3,6 +3,8 @@ FW_DIR="$(pwd)/.firmware"
 FW_IMAGE_DIR="${FW_DIR}/images"
 S3_URL="https://s3-ap-northeast-1.amazonaws.com/stak-images/firmware/chip/stable/latest"
 
+LATEST_URL=""
+
 FLASH_SCRIPT=./chip-fel-flash.sh
 
 function require_directory {
@@ -13,6 +15,25 @@ function require_directory {
 
 function cache_download {
   if [[ ! -f "${1}/${2}" ]]; then
+
+    if [[ -z "$LATEST_URL" ]]; then
+      LATEST_URL="$(wget -q -O- ${S3_URL})"
+      echo "LATEST_URL=$LATEST_URL"
+      if [[ -z "${LATEST_URL}" ]]; then
+          echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
+          exit 1
+      fi
+  
+      BUILD=${LATEST_URL%%/}
+      BUILD=${BUILD##*/}
+      echo "BUILD=$BUILD"
+  
+      if [[ -z "${BUILD}" ]]; then
+        echo "error: could not extract build number from build"
+        exit 1
+      fi
+    fi
+
     echo "$BUILD" > ${FW_IMAGE_DIR}/build
     
     wget -P "${FW_IMAGE_DIR}" "${LATEST_URL}images/${2}" ||
@@ -39,22 +60,6 @@ while getopts "uf" opt; do
       ;;
   esac
 done
-
-LATEST_URL="$(wget -q -O- ${S3_URL})"
-echo "LATEST_URL=$LATEST_URL"
-if [[ -z "${LATEST_URL}" ]]; then
-      echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
-      exit 1
-fi
-
-BUILD=${LATEST_URL%%/}
-BUILD=${BUILD##*/}
-echo "BUILD=$BUILD"
-
-if [[ -z "${BUILD}" ]]; then
-  echo "error: could not extract build number from build"
-  exit 1
-fi
 
 require_directory "${FW_IMAGE_DIR}"
 cache_download "${FW_IMAGE_DIR}" rootfs.ubi
