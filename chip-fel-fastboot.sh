@@ -91,6 +91,21 @@ prepare_uboot_script() {
 	mkimage -A arm -T script -C none -n "flash CHIP" -d $UBOOT_SCRIPT_SRC $UBOOT_SCRIPT
 }
 
+wait_for_fastboot() {
+  echo -n "waiting for fastboot...";
+  for ((i=$TIMEOUT; i>0; i--)) {
+    if [[ ! -z "$(fastboot devices)" ]]; then
+      echo "OK";
+      return 0;
+    fi
+    echo -n ".";
+    sleep 1
+  }
+
+  echo "TIMEOUT";
+  return 1
+}
+
 echo == preparing images ==
 prepare_images
 prepare_uboot_script
@@ -100,18 +115,21 @@ ${FEL} spl $SPL
 
 sleep 1 # wait for DRAM initialization to complete
 
-echo == upload images ==
+echo == upload spl ==
 ${FEL} write $SPL_MEM_ADDR $PADDED_SPL
+echo == upload u-boot ==
 ${FEL} write $UBOOT_MEM_ADDR $PADDED_UBOOT
-
+echo == upload u-boot script ==
 ${FEL} write $UBOOT_SCRIPT_MEM_ADDR $UBOOT_SCRIPT
 
 echo == execute the main u-boot binary ==
 ${FEL} exe $UBOOT_MEM_ADDR
 
 echo == waiting for fastboot ==
-while [[ -z "$(fastboot devices)" ]]; do sleep 1; done
-fastboot -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
-fastboot continue
-
-rm -rf ${TMPDIR}
+if wait_for_fastboot; then
+  fastboot -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
+  fastboot continue
+else
+  rm -rf ${TMPDIR}
+  exit 1
+fi
