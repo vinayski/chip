@@ -81,12 +81,9 @@ prepare_uboot_script() {
   echo "echo going to fastboot mode" >>$UBOOT_SCRIPT_SRC
   echo "fastboot" >>$UBOOT_SCRIPT_SRC
   echo "echo " >>$UBOOT_SCRIPT_SRC
+  echo "echo *****************[ BOOT ]*****************" >>$UBOOT_SCRIPT_SRC
   echo "echo " >>$UBOOT_SCRIPT_SRC
-  echo "echo *********************************************" >>$UBOOT_SCRIPT_SRC
-  echo "echo *****************[ SUCCESS ]*****************" >>$UBOOT_SCRIPT_SRC
-  echo "echo *********************************************" >>$UBOOT_SCRIPT_SRC
-  echo "echo " >>$UBOOT_SCRIPT_SRC
-  echo "echo " >>$UBOOT_SCRIPT_SRC
+  echo "boot" >>$UBOOT_SCRIPT_SRC
 
 	mkimage -A arm -T script -C none -n "flash CHIP" -d $UBOOT_SCRIPT_SRC $UBOOT_SCRIPT
 }

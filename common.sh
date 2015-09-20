@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TIMEOUT=20
+TIMEOUT=30
 
 onMac() {
   if [ "$(uname)" == "Darwin" ]; then
