@@ -124,7 +124,7 @@ ${FEL} exe $UBOOT_MEM_ADDR
 
 echo == waiting for fastboot ==
 if wait_for_fastboot; then
-  fastboot -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
+  fastboot -S 0 -u flash UBI ${BUILDROOT_OUTPUT_DIR}/images/rootfs.ubi
   fastboot continue
 else
   rm -rf ${TMPDIR}
