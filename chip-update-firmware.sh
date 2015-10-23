@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+source $SCRIPTDIR/common.sh
+
 FLASH_SCRIPT=./chip-fel-flash.sh
 WHAT=buildroot
 BRANCH=stable
@@ -99,4 +102,13 @@ cache_download "${FW_IMAGE_DIR}" ${BR_URL} zImage
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
 
 BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION}
+
+if ! wait_for_linuxboot; then
+  echo "ERROR: could not flash"
+  rm -rf ${TMPDIR}
+  exit 1
+else
+  ${SCRIPTDIR}/verify.sh
+fi
+
 exit $?

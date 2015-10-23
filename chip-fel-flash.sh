@@ -1,7 +1,6 @@
 #!/bin/bash
 
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
 source $SCRIPTDIR/common.sh
 
 FEL=fel
@@ -161,14 +160,6 @@ else
     rm -rf ${TMPDIR}
     exit 1
   fi
-fi
-
-if ! wait_for_linuxboot; then
-  echo "ERROR: could not flash"
-  rm -rf ${TMPDIR}
-  exit 1
-else
-  ${SCRIPTDIR}/verify.sh
 fi
 
 rm -rf ${TMPDIR}
