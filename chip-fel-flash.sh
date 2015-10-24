@@ -6,6 +6,7 @@ source $SCRIPTDIR/common.sh
 FEL=fel
 
 METHOD=${METHOD:-fel}
+AFTER_FLASHING=${AFTER_FLASHING:-boot}
 
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
@@ -85,15 +86,21 @@ prepare_uboot_script() {
 	  echo "nand slc-mode on" >> "${UBOOT_SCRIPT_SRC}"
 	  echo "nand write.trimffs $UBI_MEM_ADDR 0x1000000 $UBI_SIZE" >> "${UBOOT_SCRIPT_SRC}"
 	  echo "mw \${scriptaddr} 0x0" >> "${UBOOT_SCRIPT_SRC}"
-	  echo "boot" >> "${UBOOT_SCRIPT_SRC}"
   else
     echo "echo going to fastboot mode" >>"${UBOOT_SCRIPT_SRC}"
     echo "fastboot" >>"${UBOOT_SCRIPT_SRC}"
+  fi
+
+  if [[ "${AFTER_FLASHING}" == "boot" ]]; then
     echo "echo " >>"${UBOOT_SCRIPT_SRC}"
     echo "echo *****************[ BOOT ]*****************" >>"${UBOOT_SCRIPT_SRC}"
     echo "echo " >>"${UBOOT_SCRIPT_SRC}"
+    echo "boot" >> "${UBOOT_SCRIPT_SRC}"
+  else
     echo "echo " >>"${UBOOT_SCRIPT_SRC}"
-    echo "boot" >>"${UBOOT_SCRIPT_SRC}"
+    echo "echo *****************[ FLASHING DONE ]*****************" >>"${UBOOT_SCRIPT_SRC}"
+    echo "echo " >>"${UBOOT_SCRIPT_SRC}"
+    echo "while true; do; sleep 10; done;" >>"${UBOOT_SCRIPT_SRC}"
   fi
 
 	mkimage -A arm -T script -C none -n "flash CHIP" -d "${UBOOT_SCRIPT_SRC}" "${UBOOT_SCRIPT}"
@@ -103,11 +110,15 @@ prepare_uboot_script() {
 ##############################################################
 #  main
 ##############################################################
-while getopts "f" opt; do
+while getopts "fl" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
       METHOD=fastboot
+      ;;
+    l)
+      echo "factory mode remain in u-boot after flashing"
+      AFTER_FLASHING=loop
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2

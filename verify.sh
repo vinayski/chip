@@ -108,7 +108,7 @@ def main():
   ser.close();
   
 #  print "---> TESTS FAILED"
-  return 1
+  return 0
 
 
 
