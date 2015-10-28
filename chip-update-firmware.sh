@@ -32,17 +32,23 @@ function cache_download {
     if [[ "${S3_MD5}" != "${MD5}" ]]; then
       echo "md5sum differs"
       rm ${DEST_DIR}/${FILE}
-      wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"
+      if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
+        echo "download of ${SRC_URL}/${FILE} failed!"
+        exit $?
+      fi 
     else
       echo "file already downloaded"
     fi
   else
-    wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"
+    if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
+      echo "download of ${SRC_URL}/${FILE} failed!"
+      exit $?
+    fi 
   fi
 }
     
 
-while getopts "ufd" opt; do
+while getopts "ufdb:w:" opt; do
   case $opt in
     u)
       echo "updating cache"
@@ -53,6 +59,14 @@ while getopts "ufd" opt; do
     f)
       echo "fastboot enabled"
       FLASH_SCRIPT_OPTION="-f"
+      ;;
+    b)
+      BRANCH="$OPTARG"
+      echo "BRANCH = ${BRANCH}"
+      ;;
+    w)
+      WHAT="$OPTARG"
+      echo "WHAT = ${BRANCH}"
       ;;
     d)
       echo "debian selected"
@@ -97,11 +111,12 @@ require_directory "${FW_IMAGE_DIR}"
 cache_download "${FW_IMAGE_DIR}" ${ROOTFS_URL} rootfs.ubi
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} sun5i-r8-chip.dtb
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl.bin
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl-with-ecc.bin
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} uboot-env.bin
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} zImage
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
 
-BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION}
+BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo "ERROR: could not flash" && exit 1
 
 if ! wait_for_linuxboot; then
   echo "ERROR: could not flash"

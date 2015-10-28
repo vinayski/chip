@@ -3,12 +3,36 @@
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
+##############################################################
+#  main
+##############################################################
+while getopts "flu:" opt; do
+  case $opt in
+    f)
+      echo "fastboot enabled"
+      METHOD=fastboot
+      ;;
+    l)
+      echo "factory mode remain in u-boot after flashing"
+      AFTER_FLASHING=loop
+      ;;
+    u)
+      BUILDROOT_OUTPUT_DIR="${OPTARG}"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
+
+echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
+
 FEL=fel
 
 METHOD=${METHOD:-fel}
-AFTER_FLASHING=${AFTER_FLASHING:-boot}
+AFTER_FLASHING=${AFTER_FLASHING:-wait}
 
-echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
 NAND_ERASE_BB=false
 if [ "$1" == "erase-bb" ]; then
@@ -17,7 +41,7 @@ fi
 
 PATH=$PATH:$BUILDROOT_OUTPUT_DIR/host/usr/bin
 TMPDIR=`mktemp -d -t chipflashXXXXXX`
-PADDED_SPL="$TMPDIR/sunxi-padded-spl"
+PADDED_SPL="${BUILDROOT_OUTPUT_DIR}/images/sunxi-spl-with-ecc.bin"
 PADDED_SPL_SIZE=0
 UBOOT_SCRIPT="$TMPDIR/uboot.scr"
 UBOOT_SCRIPT_MEM_ADDR=0x43100000
@@ -36,31 +60,22 @@ PAGE_SIZE=16384
 OOB_SIZE=1664
 
 prepare_images() {
-	local in=$SPL
-	local out=$PADDED_SPL
-
-	if [ -e $out ]; then
-		rm $out
-	fi
-
-  if [[ ! -e "${SCRIPTDIR}/spl-image-builder" ]]; then
-    pushd "${SCRIPTDIR}"
-    make
-    popd
+  #PADDED_SPL_SIZE in pages
+  if [[ ! -e "${PADDED_SPL}" ]]; then
+    echo "ERROR: can not read ${PADDED_SPL}"
+    exit 1
   fi
 
-  "${SCRIPTDIR}/spl-image-builder" -d -r 3 -u 4096 -o 1664 -p 16384 -c 1024 -s 64 "$in" "$out"
-
-  #PADDED_SPL_SIZE in pages
-	PADDED_SPL_SIZE=$(filesize "$out")
+	PADDED_SPL_SIZE=$(filesize "${PADDED_SPL}")
   PADDED_SPL_SIZE=$(($PADDED_SPL_SIZE / ($PAGE_SIZE + $OOB_SIZE)))
   PADDED_SPL_SIZE=$(echo $PADDED_SPL_SIZE | xargs printf "0x%08x")
-  echo "filesize= $(filesize "$out")"
   echo "PADDED_SPL_SIZE=$PADDED_SPL_SIZE"
 
 	# Align the u-boot image on a page boundary
 	dd if="$UBOOT" of="$PADDED_UBOOT" bs=16k conv=sync
 	UBOOT_SIZE=`filesize "$PADDED_UBOOT" | xargs printf "0x%08x"`
+  echo "UBOOT_SIZE=${UBOOT_SIZE}"
+  echo "PADDED_UBOOT_SIZE=${PADDED_UBOOT_SIZE}"
 	dd if=/dev/urandom of="$PADDED_UBOOT" seek=$((UBOOT_SIZE / 0x4000)) bs=16k count=$(((PADDED_UBOOT_SIZE - UBOOT_SIZE) / 0x4000))
 }
 
@@ -107,26 +122,6 @@ prepare_uboot_script() {
 }
 
 
-##############################################################
-#  main
-##############################################################
-while getopts "fl" opt; do
-  case $opt in
-    f)
-      echo "fastboot enabled"
-      METHOD=fastboot
-      ;;
-    l)
-      echo "factory mode remain in u-boot after flashing"
-      AFTER_FLASHING=loop
-      ;;
-    \?)
-      echo "Invalid option: -$OPTARG" >&2
-      exit 1
-      ;;
-  esac
-done
-
 
 echo == preparing images ==
 prepare_images
@@ -141,13 +136,13 @@ ${FEL} spl "${SPL}"
 sleep 1 # wait for DRAM initialization to complete
 
 echo == upload spl ==
-${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}"
+${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" || ( echo "ERROR: could not write ${PADDED_SPL}" && exit $? )
 
 echo == upload u-boot ==
-${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}"
+${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" || ( echo "ERROR: could not write ${PADDED_UBOOT}" && exit $? )
 
 echo == upload u-boot script ==
-${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}"
+${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}" || ( echo "ERROR: could not write ${UBOOT_SCRIPT}" && exit $? )
 
 if [[ "${METHOD}" == "fel" ]]; then
   echo == upload ubi ==
