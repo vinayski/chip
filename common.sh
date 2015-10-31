@@ -1,6 +1,7 @@
 #!/bin/bash
 
 TIMEOUT=30
+FEL=fel
 
 #------------------------------------------------------------
 onMac() {
@@ -24,7 +25,7 @@ filesize() {
 wait_for_fastboot() {
   echo -n "waiting for fastboot...";
   for ((i=$TIMEOUT; i>0; i--)) {
-    if [[ ! -z "$(fastboot devices)" ]]; then
+    if [[ ! -z "$(fastboot -i 0x1f3a devices)" ]]; then
       echo "OK";
       return 0;
     fi

@@ -3,6 +3,12 @@
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
+if ! wait_for_fel; then
+  echo "ERROR: please jumper your CHIP in FEL mode then power on"
+  exit 1
+fi
+
+
 FLASH_SCRIPT=./chip-fel-flash.sh
 WHAT=buildroot
 BRANCH=stable
@@ -120,7 +126,6 @@ BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo 
 
 if ! wait_for_linuxboot; then
   echo "ERROR: could not flash"
-  rm -rf ${TMPDIR}
   exit 1
 else
   ${SCRIPTDIR}/verify.sh
