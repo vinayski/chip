@@ -104,7 +104,7 @@ if [[ "${WHAT}" == "buildroot" ]]; then
   BR_URL="${ROOTFS_URL}"
 else
   BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
-  BR_URL="${BASE_URL}/buildroot/${BRANCH}/${BR_BUILD}/images"
+  BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
   BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
 fi 
 
