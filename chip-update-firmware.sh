@@ -11,7 +11,7 @@ fi
 
 FLASH_SCRIPT=./chip-fel-flash.sh
 WHAT=buildroot
-BRANCH=stable
+BRANCH=next
 
 function require_directory {
   if [[ ! -d "${1}" ]]; then
