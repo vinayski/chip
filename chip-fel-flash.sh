@@ -121,7 +121,17 @@ prepare_uboot_script() {
 	mkimage -A arm -T script -C none -n "flash CHIP" -d "${UBOOT_SCRIPT_SRC}" "${UBOOT_SCRIPT}"
 }
 
-
+assert_error() {
+	ERR=$?
+	ERRCODE=$1
+	if [ "${ERR}" != "0" ]; then
+		if [ -z "${ERR}" ]; then
+			exit ${ERR}
+		fi
+	else
+		exit ${ERRCODE}
+	fi
+}
 
 echo == preparing images ==
 prepare_images
@@ -132,41 +142,50 @@ if ! wait_for_fel; then
   echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
 fi
 ${FEL} spl "${SPL}"
+assert_error 128
 
 sleep 1 # wait for DRAM initialization to complete
 
 echo == upload spl ==
 ${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" || ( echo "ERROR: could not write ${PADDED_SPL}" && exit $? )
+assert_error 129
 
 echo == upload u-boot ==
 ${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" || ( echo "ERROR: could not write ${PADDED_UBOOT}" && exit $? )
+assert_error 130
 
 echo == upload u-boot script ==
 ${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}" || ( echo "ERROR: could not write ${UBOOT_SCRIPT}" && exit $? )
+assert_error 131
 
 if [[ "${METHOD}" == "fel" ]]; then
-  echo == upload ubi ==
-  ${FEL} --progress write $UBI_MEM_ADDR "${UBI}"
+	echo == upload ubi ==
+	${FEL} --progress write $UBI_MEM_ADDR "${UBI}"
 
-  echo == execute the main u-boot binary ==
-  ${FEL} exe $UBOOT_MEM_ADDR
+	echo == execute the main u-boot binary ==
+	${FEL} exe $UBOOT_MEM_ADDR
 
-  echo == write ubi ==
+	echo == write ubi ==
 else
-  echo == execute the main u-boot binary ==
-  ${FEL} exe $UBOOT_MEM_ADDR
- 
-  echo == creating sparse image ==
-  img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
- 
-  echo == waiting for fastboot ==
-  if wait_for_fastboot; then
-    fastboot -i 0x1f3a -u flash UBI ${SPARSE_UBI}
-    fastboot -i 0x1f3a continue
-  else
-    rm -rf "${TMPDIR}"
-    exit 1
-  fi
+	echo == execute the main u-boot binary ==
+	${FEL} exe $UBOOT_MEM_ADDR
+	assert_error 132
+
+	echo == creating sparse image ==
+	img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
+	assert_error 133
+
+	echo == waiting for fastboot ==
+	if wait_for_fastboot; then
+		fastboot -i 0x1f3a -u flash UBI ${SPARSE_UBI}
+		assert_error 134
+
+		fastboot -i 0x1f3a continue
+		assert_error 135
+	else
+		rm -rf "${TMPDIR}"
+		exit 1
+	fi
 fi
 
 rm -rf "${TMPDIR}"
