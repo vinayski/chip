@@ -127,9 +127,9 @@ assert_error() {
 	if [ "${ERR}" != "0" ]; then
 		if [ -z "${ERR}" ]; then
 			exit ${ERR}
+		else
+			exit ${ERRCODE}
 		fi
-	else
-		exit ${ERRCODE}
 	fi
 }
 
