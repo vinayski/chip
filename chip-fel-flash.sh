@@ -96,7 +96,16 @@ prepare_uboot_script() {
 	echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw earlyprintk ubi.mtd=4" >> "${UBOOT_SCRIPT_SRC}"
 	echo "setenv bootcmd 'if test -n \${fel_booted} && test -n \${scriptaddr}; then echo '(FEL boot)'; source \${scriptaddr}; fi; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> "${UBOOT_SCRIPT_SRC}"
   echo "setenv fel_booted 0" >> "${UBOOT_SCRIPT_SRC}"
-	echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
+
+  echo "echo Enabling Splash" >> "${UBOOT_SCRIPT_SRC}"
+  echo "setenv stdout serial" >> "${UBOOT_SCRIPT_SRC}"
+  echo "setenv stderr serial" >> "${UBOOT_SCRIPT_SRC}"
+  echo "setenv splashpos m,m" >> "${UBOOT_SCRIPT_SRC}"
+
+  echo "echo Configuring Video Mode"
+  echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc" >> "${UBOOT_SCRIPT_SRC}"
+
+  echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
 
   if [[ "${METHOD}" == "fel" ]]; then
 	  echo "nand write.slc-mode.trimffs $UBI_MEM_ADDR 0x1000000 $UBI_SIZE" >> "${UBOOT_SCRIPT_SRC}"
