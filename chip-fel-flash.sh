@@ -103,7 +103,7 @@ prepare_uboot_script() {
   echo "setenv splashpos m,m" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo Configuring Video Mode"
-  echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc" >> "${UBOOT_SCRIPT_SRC}"
+  echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
 
