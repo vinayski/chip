@@ -54,7 +54,7 @@ function cache_download {
 }
     
 
-while getopts "ufdb:w:" opt; do
+while getopts "ufdb:w:B:" opt; do
   case $opt in
     u)
       echo "updating cache"
@@ -65,6 +65,10 @@ while getopts "ufdb:w:" opt; do
     f)
       echo "fastboot enabled"
       FLASH_SCRIPT_OPTION="-f"
+      ;;
+    B)
+      BUILD="$OPTARG"
+      echo "BUILD = ${BUILD}"
       ;;
     b)
       BRANCH="$OPTARG"
@@ -91,10 +95,14 @@ FW_IMAGE_DIR="${FW_DIR}/images"
 BASE_URL="http://opensource.nextthing.co/chip"
 S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
 
-ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
-if [[ -z "${ROOTFS_URL}" ]]; then
-  echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
-  exit 1
+if [[ -z "$BUILD" ]]; then
+  ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
+  if [[ -z "${ROOTFS_URL}" ]]; then
+    echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
+    exit 1
+  fi
+else
+  ROOTFS_URL="${S3_URL%latest}$BUILD"
 fi
 
 if [[ "${WHAT}" == "buildroot" ]]; then
