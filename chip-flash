@@ -13,7 +13,7 @@ done
 ##############################################################
 #  main
 ##############################################################
-TEMP=`getopt -o "sflu:" --long "fel,fastboot,loop-after-flash,stage:" -- "$@"`
+TEMP=`getopt -o "sflu:n:" --long "fel,fastboot,loop-after-flash,stage:,chip-path:" -- "$@"`
 eval set -- "$TEMP"
 
 while true; do
@@ -49,6 +49,15 @@ while true; do
         shift
         shift
         ;;
+    -n|--chip-path)
+        CHIP_PATH=$2
+        FEL_DEVICE="--dev $(udevadm info ${CHIP_PATH} | grep "E\: BUSNUM" | awk -F "=" '{ print $NF }'):$(udevadm info ${CHIP_PATH} | grep "E\: DEVNUM" | awk -F "=" '{ print $NF }')"
+        FASTBOOT_PORT="-s usb:$(udevadm info ${CHIP_PATH} | grep "P\:" | awk -F "/" '{print $NF}')"
+        echo "Fastboot port: ${FASTBOOT_PORT}"
+        echo "FEL device: ${FEL_DEVICE}"
+        shift
+        shift
+        ;;
     --)
       shift; break;;
     *)
@@ -69,7 +78,7 @@ if ${RUN_ALL_STAGES}; then
     done
 fi
 
-FEL=fel
+FEL="fel ${FEL_DEVICE}"
 
 METHOD=${METHOD:-fastboot}
 AFTER_FLASHING=${AFTER_FLASHING:-wait}
@@ -234,8 +243,7 @@ if [[ "${METHOD}" == "fel" ]]; then
         echo == execute the main u-boot binary ==
         ${FEL} exe $UBOOT_MEM_ADDR
     fi
-
-    echo == write ubi ==
+    rm -rf "${TMPDIR}"
 else
     if ${stage[4]}; then
         echo == execute the main u-boot binary ==
@@ -243,23 +251,21 @@ else
         assert_error 132
     fi
 
-    if ${stage[5]}; then
+    if ${stage[5]}; then        
         echo == creating sparse image ==
         img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
         assert_error 133
 
         echo == waiting for fastboot ==
         if wait_for_fastboot; then
-            fastboot -i 0x1f3a -u flash UBI ${SPARSE_UBI}
+            fastboot ${FASTBOOT_PORT} -i 0x1f3a -u flash UBI ${SPARSE_UBI}
             assert_error 134
 
-            fastboot -i 0x1f3a continue
+            fastboot ${FASTBOOT_PORT} -i 0x1f3a continue
             assert_error 135
         else
-            rm -rf "${TMPDIR}"
             exit 1
         fi
+        rm -rf "${TMPDIR}"
     fi
 fi
-
-rm -rf "${TMPDIR}"
