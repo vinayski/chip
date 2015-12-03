@@ -59,6 +59,7 @@ while true; do
   esac
 done
 
+BUILDROOT_OUTPUT_DIR="${BUILDROOT_OUTPUT_DIR:-$(pwd)/.firmware}"
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
 if ${RUN_ALL_STAGES}; then
@@ -97,7 +98,7 @@ SPARSE_UBI="${TMPDIR}/rootfs.ubi.sparse"
 UBI_MEM_ADDR=0x4b000000
 
 echo "Temporary directory: ${TMPDIR}"
-if [ ! -d "$TMPDIR" ]; then
+if [ ! -d "${TMPDIR}" ]; then
     echo "Making directory: ${TMPDIR}"
     mkdir -p "${TMPDIR}"
 fi
@@ -188,22 +189,21 @@ assert_error() {
     fi
 }
 
-echo == preparing images ==
-prepare_images
-prepare_uboot_script
-
-echo == upload the SPL to SRAM and execute it ==
-if ! wait_for_fel; then
-  echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-fi
-
-
 if ${stage[0]}; then
+    echo == preparing images ==
+    prepare_images
+    prepare_uboot_script
+
+    echo == upload the SPL to SRAM and execute it ==
+    if ! wait_for_fel; then
+        echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
+    fi
+
     ${FEL} spl "${SPL}"
     assert_error 128
+    sleep 1 # wait for DRAM initialization to complete
 fi
 
-sleep 1 # wait for DRAM initialization to complete
 
 if ${stage[1]}; then
     echo == upload spl ==
