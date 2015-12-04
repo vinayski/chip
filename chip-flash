@@ -200,13 +200,14 @@ assert_error() {
 
 if ${stage[0]}; then
     echo == preparing images ==
-    prepare_images
-    prepare_uboot_script
+    if [ ! -f "${PADDED_UBOOT}" ]; then
+        prepare_images
+    fi
+    if [ ! -f "${UBOOT_SCRIPT}" ]; then
+        prepare_uboot_script
+    fi
 
     echo == upload the SPL to SRAM and execute it ==
-    if ! wait_for_fel; then
-        echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-    fi
 
     ${FEL} spl "${SPL}"
     assert_error 128
@@ -236,7 +237,7 @@ if [[ "${METHOD}" == "fel" ]]; then
     
     if ${stage[4]}; then
         echo == upload ubi ==
-        ${FEL} --progress write $UBI_MEM_ADDR "${UBI}"
+        ${FEL} write $UBI_MEM_ADDR "${UBI}"
     fi
 
     if ${stage[5]}; then
@@ -253,11 +254,13 @@ else
 
     if ${stage[5]}; then        
         echo == creating sparse image ==
-        img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
+        if [ ! -f "${SPARSE_UBI}" ]; then
+            img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
+        fi
         assert_error 133
 
         echo == waiting for fastboot ==
-        if wait_for_fastboot; then
+        if wait_for_fastboot ${FASTBOOT_PORT}; then
             fastboot ${FASTBOOT_PORT} -i 0x1f3a -u flash UBI ${SPARSE_UBI}
             assert_error 134
 

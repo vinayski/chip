@@ -25,7 +25,7 @@ filesize() {
 wait_for_fastboot() {
   echo -n "waiting for fastboot...";
   for ((i=$TIMEOUT; i>0; i--)) {
-    if [[ ! -z "$(fastboot -i 0x1f3a devices)" ]]; then
+    if [[ ! -z "$(fastboot -i 0x1f3a $1 devices)" ]]; then
       echo "OK";
       return 0;
     fi
@@ -41,7 +41,7 @@ wait_for_fastboot() {
 wait_for_fel() {
   echo -n "waiting for fel...";
   for ((i=$TIMEOUT; i>0; i--)) {
-    if ${FEL} ver 2>/dev/null >/dev/null; then
+    if ${FEL} $1 ver 2>/dev/null >/dev/null; then
       echo "OK"
       return 0;
     fi
