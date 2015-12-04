@@ -55,7 +55,6 @@ while true; do
         FASTBOOT_PORT="-s usb:$(udevadm info ${CHIP_PATH} | grep "P\:" | awk -F "/" '{print $NF}')"
         echo "Fastboot port: ${FASTBOOT_PORT}"
         echo "FEL device: ${FEL_DEVICE}"
-        exit 1
         shift
         shift
         ;;
