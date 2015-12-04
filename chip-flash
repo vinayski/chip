@@ -51,10 +51,11 @@ while true; do
         ;;
     -n|--chip-path)
         CHIP_PATH=$2
-        FEL_DEVICE="--dev $(udevadm info ${CHIP_PATH} | grep "E\: BUSNUM" | awk -F "=" '{ print $NF }'):$(udevadm info ${CHIP_PATH} | grep "E\: DEVNUM" | awk -F "=" '{ print $NF }')"
+        FEL_DEVICE="--dev $(udevadm info ${CHIP_PATH} | grep "E\: BUSNUM" | awk -F "=" '{ print $NF }'| sed 's/^0*//'):$(udevadm info ${CHIP_PATH} | grep "E\: DEVNUM" | awk -F "=" '{ print $NF }'| sed 's/^0*//')"
         FASTBOOT_PORT="-s usb:$(udevadm info ${CHIP_PATH} | grep "P\:" | awk -F "/" '{print $NF}')"
         echo "Fastboot port: ${FASTBOOT_PORT}"
         echo "FEL device: ${FEL_DEVICE}"
+        exit 1
         shift
         shift
         ;;
