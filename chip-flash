@@ -68,11 +68,14 @@ while true; do
   esac
 done
 
+log() {
+	echo "  ${FEL_DEVICE}: $@"
+}
 BUILDROOT_OUTPUT_DIR="${BUILDROOT_OUTPUT_DIR:-$(pwd)/.firmware}"
-echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
+log "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
 if ${RUN_ALL_STAGES}; then
-    echo "Running all stages"
+    log "Running all stages"
     for i in $(seq 0 $NUM_STAGES); do
         stage[i]=true
     done
@@ -106,9 +109,9 @@ UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
 SPARSE_UBI="${TMPDIR}/rootfs.ubi.sparse"
 UBI_MEM_ADDR=0x4b000000
 
-echo "Temporary directory: ${TMPDIR}"
+log "Temporary directory: ${TMPDIR}"
 if [ ! -d "${TMPDIR}" ]; then
-    echo "Making directory: ${TMPDIR}"
+    log "Making directory: ${TMPDIR}"
     mkdir -p "${TMPDIR}"
 fi
 
@@ -119,20 +122,20 @@ OOB_SIZE=1664
 prepare_images() {
   #PADDED_SPL_SIZE in pages
   if [[ ! -e "${PADDED_SPL}" ]]; then
-    echo "ERROR: can not read ${PADDED_SPL}"
+    log "ERROR: can not read ${PADDED_SPL}"
     exit 1
   fi
 
     PADDED_SPL_SIZE=$(filesize "${PADDED_SPL}")
   PADDED_SPL_SIZE=$(($PADDED_SPL_SIZE / ($PAGE_SIZE + $OOB_SIZE)))
   PADDED_SPL_SIZE=$(echo $PADDED_SPL_SIZE | xargs printf "0x%08x")
-  echo "PADDED_SPL_SIZE=$PADDED_SPL_SIZE"
+  log "PADDED_SPL_SIZE=$PADDED_SPL_SIZE"
 
     # Align the u-boot image on a page boundary
     dd if="$UBOOT" of="$PADDED_UBOOT" bs=16k conv=sync
     UBOOT_SIZE=`filesize "$PADDED_UBOOT" | xargs printf "0x%08x"`
-  echo "UBOOT_SIZE=${UBOOT_SIZE}"
-  echo "PADDED_UBOOT_SIZE=${PADDED_UBOOT_SIZE}"
+  log "UBOOT_SIZE=${UBOOT_SIZE}"
+  log "PADDED_UBOOT_SIZE=${PADDED_UBOOT_SIZE}"
     dd if=/dev/urandom of="$PADDED_UBOOT" seek=$((UBOOT_SIZE / 0x4000)) bs=16k count=$(((PADDED_UBOOT_SIZE - UBOOT_SIZE) / 0x4000))
 }
 
@@ -199,36 +202,36 @@ assert_error() {
 }
 
 if ${stage[0]}; then
-    echo == preparing images ==
+    log "== preparing images =="
     if [ ! -f "${PADDED_UBOOT}" ]; then
-        prepare_images
+        prepare_images > /dev/null
     fi
     if [ ! -f "${UBOOT_SCRIPT}" ]; then
-        prepare_uboot_script
+        prepare_uboot_script > /dev/null
     fi
 
-    echo == upload the SPL to SRAM and execute it ==
+    log "== upload the SPL to SRAM and execute it =="
 
-    ${FEL} spl "${SPL}"
+    ${FEL} spl "${SPL}" > /dev/null
     assert_error 128
     sleep 1 # wait for DRAM initialization to complete
 fi
 
 
 if ${stage[1]}; then
-    echo == upload spl ==
-    ${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" || ( echo "ERROR: could not write ${PADDED_SPL}" && exit $? )
+    log "== upload spl =="
+    ${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" > /dev/null
     assert_error 129
 fi
 
 if ${stage[2]}; then
-    echo == upload u-boot ==
-    ${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" || ( echo "ERROR: could not write ${PADDED_UBOOT}" && exit $? )
+    log "== upload u-boot =="
+    ${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" > /dev/null
     assert_error 130
 fi
 
 if ${stage[3]}; then
-    echo == upload u-boot script ==
+    log "== upload u-boot script =="
     ${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}" || ( echo "ERROR: could not write ${UBOOT_SCRIPT}" && exit $? )
     assert_error 131
 fi
@@ -236,39 +239,41 @@ fi
 if [[ "${METHOD}" == "fel" ]]; then
     
     if ${stage[4]}; then
-        echo == upload ubi ==
-        ${FEL} write $UBI_MEM_ADDR "${UBI}"
+        log "== upload ubi =="
+        ${FEL} write $UBI_MEM_ADDR "${UBI}" > /dev/null
+	assert_error 132
     fi
 
     if ${stage[5]}; then
-        echo == execute the main u-boot binary ==
-        ${FEL} exe $UBOOT_MEM_ADDR
+        log "== execute the main u-boot binary =="
+        ${FEL} exe $UBOOT_MEM_ADDR > /dev/null
+	assert_error 133
     fi
-    rm -rf "${TMPDIR}"
+    # rm -rf "${TMPDIR}"
 else
     if ${stage[4]}; then
-        echo == execute the main u-boot binary ==
-        ${FEL} exe $UBOOT_MEM_ADDR
+        log "== execute the main u-boot binary =="
+        ${FEL} exe $UBOOT_MEM_ADDR > /dev/null
         assert_error 132
     fi
 
-    if ${stage[5]}; then        
-        echo == creating sparse image ==
+    if ${stage[5]}; then
+        log "== creating sparse image =="
         if [ ! -f "${SPARSE_UBI}" ]; then
-            img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024))
+            img2simg ${UBI} ${SPARSE_UBI} $((2*1024*1024)) &> /dev/null
         fi
         assert_error 133
 
-        echo == waiting for fastboot ==
+        log "== waiting for fastboot =="
         if wait_for_fastboot ${FASTBOOT_PORT}; then
-            fastboot ${FASTBOOT_PORT} -i 0x1f3a -u flash UBI ${SPARSE_UBI}
+            fastboot ${FASTBOOT_PORT} -i 0x1f3a -u flash UBI ${SPARSE_UBI} > /dev/null
             assert_error 134
 
-            fastboot ${FASTBOOT_PORT} -i 0x1f3a continue
+            fastboot ${FASTBOOT_PORT} -i 0x1f3a continue > /dev/null
             assert_error 135
         else
             exit 1
         fi
-        rm -rf "${TMPDIR}"
+        # rm -rf "${TMPDIR}"
     fi
 fi
