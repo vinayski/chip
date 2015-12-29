@@ -79,7 +79,7 @@ prepare_uboot_script() {
 	echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo going to fastboot mode" >>"${UBOOT_SCRIPT_SRC}"
-  echo "fastboot" >>"${UBOOT_SCRIPT_SRC}"
+  echo "fastboot 0" >>"${UBOOT_SCRIPT_SRC}"
   echo "echo " >>"${UBOOT_SCRIPT_SRC}"
   echo "echo *****************[ BOOT ]*****************" >>"${UBOOT_SCRIPT_SRC}"
   echo "echo " >>"${UBOOT_SCRIPT_SRC}"

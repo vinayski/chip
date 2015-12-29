@@ -3,9 +3,15 @@
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
+if ! wait_for_fel; then
+  echo "ERROR: please jumper your CHIP in FEL mode then power on"
+  exit 1
+fi
+
+
 FLASH_SCRIPT=./chip-fel-flash.sh
 WHAT=buildroot
-BRANCH=stable
+BRANCH=next
 
 function require_directory {
   if [[ ! -d "${1}" ]]; then
@@ -32,17 +38,23 @@ function cache_download {
     if [[ "${S3_MD5}" != "${MD5}" ]]; then
       echo "md5sum differs"
       rm ${DEST_DIR}/${FILE}
-      wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"
+      if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
+        echo "download of ${SRC_URL}/${FILE} failed!"
+        exit $?
+      fi 
     else
       echo "file already downloaded"
     fi
   else
-    wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"
+    if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
+      echo "download of ${SRC_URL}/${FILE} failed!"
+      exit $?
+    fi 
   fi
 }
     
 
-while getopts "ufd" opt; do
+while getopts "ufdb:w:B:" opt; do
   case $opt in
     u)
       echo "updating cache"
@@ -53,6 +65,18 @@ while getopts "ufd" opt; do
     f)
       echo "fastboot enabled"
       FLASH_SCRIPT_OPTION="-f"
+      ;;
+    B)
+      BUILD="$OPTARG"
+      echo "BUILD = ${BUILD}"
+      ;;
+    b)
+      BRANCH="$OPTARG"
+      echo "BRANCH = ${BRANCH}"
+      ;;
+    w)
+      WHAT="$OPTARG"
+      echo "WHAT = ${WHAT}"
       ;;
     d)
       echo "debian selected"
@@ -71,10 +95,14 @@ FW_IMAGE_DIR="${FW_DIR}/images"
 BASE_URL="http://opensource.nextthing.co/chip"
 S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
 
-ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
-if [[ -z "${ROOTFS_URL}" ]]; then
-  echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
-  exit 1
+if [[ -z "$BUILD" ]]; then
+  ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
+  if [[ -z "${ROOTFS_URL}" ]]; then
+    echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
+    exit 1
+  fi
+else
+  ROOTFS_URL="${S3_URL%latest}$BUILD"
 fi
 
 if [[ "${WHAT}" == "buildroot" ]]; then
@@ -84,7 +112,7 @@ if [[ "${WHAT}" == "buildroot" ]]; then
   BR_URL="${ROOTFS_URL}"
 else
   BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
-  BR_URL="${BASE_URL}/buildroot/${BRANCH}/${BR_BUILD}/images"
+  BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
   BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
 fi 
 
@@ -97,15 +125,15 @@ require_directory "${FW_IMAGE_DIR}"
 cache_download "${FW_IMAGE_DIR}" ${ROOTFS_URL} rootfs.ubi
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} sun5i-r8-chip.dtb
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl.bin
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl-with-ecc.bin
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} uboot-env.bin
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} zImage
 cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
 
-BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION}
+BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo "ERROR: could not flash" && exit 1
 
 if ! wait_for_linuxboot; then
   echo "ERROR: could not flash"
-  rm -rf ${TMPDIR}
   exit 1
 else
   ${SCRIPTDIR}/verify.sh
