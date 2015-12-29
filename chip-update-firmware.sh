@@ -76,7 +76,7 @@ while getopts "ufdb:w:B:" opt; do
       ;;
     w)
       WHAT="$OPTARG"
-      echo "WHAT = ${BRANCH}"
+      echo "WHAT = ${WHAT}"
       ;;
     d)
       echo "debian selected"
