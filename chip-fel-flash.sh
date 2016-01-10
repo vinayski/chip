@@ -50,7 +50,7 @@ SPL="$BUILDROOT_OUTPUT_DIR/images/sunxi-spl.bin"
 SPL_MEM_ADDR=0x43000000
 UBOOT="$BUILDROOT_OUTPUT_DIR/images/u-boot-dtb.bin"
 PADDED_UBOOT="$TMPDIR/padded-uboot"
-PADDED_UBOOT_SIZE=0xc0000
+PADDED_UBOOT_SIZE=0x400000
 UBOOT_MEM_ADDR=0x4a000000
 UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
 SPARSE_UBI="${TMPDIR}/rootfs.ubi.sparse"
@@ -73,7 +73,7 @@ prepare_images() {
   echo "PADDED_SPL_SIZE=$PADDED_SPL_SIZE"
 
 	# Align the u-boot image on a page boundary
-	dd if="$UBOOT" of="$PADDED_UBOOT" bs=16k conv=sync
+	dd if="$UBOOT" of="$PADDED_UBOOT" bs=4M conv=sync
 	UBOOT_SIZE=`filesize "$PADDED_UBOOT" | xargs printf "0x%08x"`
   echo "UBOOT_SIZE=${UBOOT_SIZE}"
   echo "PADDED_UBOOT_SIZE=${PADDED_UBOOT_SIZE}"
