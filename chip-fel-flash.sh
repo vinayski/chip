@@ -6,7 +6,7 @@ source $SCRIPTDIR/common.sh
 ##############################################################
 #  main
 ##############################################################
-while getopts "flu:" opt; do
+while getopts "flpu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
@@ -18,6 +18,9 @@ while getopts "flu:" opt; do
       ;;
     u)
       BUILDROOT_OUTPUT_DIR="${OPTARG}"
+      ;;
+    p)
+      POCKET_CHIP=true
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -94,7 +97,7 @@ prepare_uboot_script() {
 
 	echo "nand write $UBOOT_MEM_ADDR 0x800000 $PADDED_UBOOT_SIZE" >> "${UBOOT_SCRIPT_SRC}"
 	echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw earlyprintk ubi.mtd=4" >> "${UBOOT_SCRIPT_SRC}"
-	echo "setenv bootcmd 'if test -n \${fel_booted} && test -n \${scriptaddr}; then echo '(FEL boot)'; source \${scriptaddr}; fi; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> "${UBOOT_SCRIPT_SRC}"
+	echo "setenv bootcmd 'gpio set PB2; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo '(FEL boot)'; source \${scriptaddr}; fi; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> "${UBOOT_SCRIPT_SRC}"
   echo "setenv fel_booted 0" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo Enabling Splash" >> "${UBOOT_SCRIPT_SRC}"
@@ -103,7 +106,11 @@ prepare_uboot_script() {
   echo "setenv splashpos m,m" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo Configuring Video Mode"
-  echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> "${UBOOT_SCRIPT_SRC}"
+  if [[ "${POCKET_CHIP}" == "true" ]]; then
+    echo "setenv video-mode" >> "${UBOOT_SCRIPT_SRC}"
+  else
+    echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> "${UBOOT_SCRIPT_SRC}"
+  fi
 
   echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
 

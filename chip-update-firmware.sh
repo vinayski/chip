@@ -54,7 +54,7 @@ function cache_download {
 }
     
 
-while getopts "ufdb:w:B:" opt; do
+while getopts "ufdpb:w:B:" opt; do
   case $opt in
     u)
       echo "updating cache"
@@ -76,11 +76,17 @@ while getopts "ufdb:w:B:" opt; do
       ;;
     w)
       WHAT="$OPTARG"
-      echo "WHAT = ${BRANCH}"
+      echo "WHAT = ${WHAT}"
       ;;
     d)
       echo "debian selected"
       WHAT="debian"
+      ;;
+    p)
+      echo "PocketC.H.I.P selected"
+      WHAT="pocketchip"
+      BUILD=123
+      FLASH_SCRIPT=./chip-fel-flash.sh -p
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -95,6 +101,8 @@ FW_IMAGE_DIR="${FW_DIR}/images"
 BASE_URL="http://opensource.nextthing.co/chip"
 S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
 
+
+
 if [[ -z "$BUILD" ]]; then
   ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
   if [[ -z "${ROOTFS_URL}" ]]; then
@@ -105,16 +113,25 @@ else
   ROOTFS_URL="${S3_URL%latest}$BUILD"
 fi
 
-if [[ "${WHAT}" == "buildroot" ]]; then
-  BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
-  BUILD=${BR_BUILD}
-  ROOTFS_URL="${ROOTFS_URL}/images"
-  BR_URL="${ROOTFS_URL}"
-else
-  BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
-  BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
-  BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
-fi 
+case "${WHAT}" in
+  "buildroot")
+    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
+    BUILD=${BR_BUILD}
+    ROOTFS_URL="${ROOTFS_URL}/images"
+    BR_URL="${ROOTFS_URL}"
+    ;;
+  "debian")
+    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
+    BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
+    BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
+    ;;
+  "pocketchip")
+    BR_BUILD=123
+    BUILD=123
+    ROOTFS_URL="http://opensource.nextthing.co/pocketchip"
+    BR_URL="$ROOTFS_URL"
+    ;;
+esac 
 
 echo "ROOTFS_URL=${ROOTFS_URL}"
 echo "BUILD=${BUILD}"
