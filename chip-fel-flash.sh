@@ -6,7 +6,7 @@ source $SCRIPTDIR/common.sh
 ##############################################################
 #  main
 ##############################################################
-while getopts "flu:" opt; do
+while getopts "flpu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
@@ -18,6 +18,9 @@ while getopts "flu:" opt; do
       ;;
     u)
       BUILDROOT_OUTPUT_DIR="${OPTARG}"
+      ;;
+    p)
+      POCKET_CHIP=true
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -50,7 +53,7 @@ SPL="$BUILDROOT_OUTPUT_DIR/images/sunxi-spl.bin"
 SPL_MEM_ADDR=0x43000000
 UBOOT="$BUILDROOT_OUTPUT_DIR/images/u-boot-dtb.bin"
 PADDED_UBOOT="$TMPDIR/padded-uboot"
-PADDED_UBOOT_SIZE=0xc0000
+PADDED_UBOOT_SIZE=0x400000
 UBOOT_MEM_ADDR=0x4a000000
 UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
 SPARSE_UBI="${TMPDIR}/rootfs.ubi.sparse"
@@ -73,7 +76,7 @@ prepare_images() {
   echo "PADDED_SPL_SIZE=$PADDED_SPL_SIZE"
 
 	# Align the u-boot image on a page boundary
-	dd if="$UBOOT" of="$PADDED_UBOOT" bs=16k conv=sync
+	dd if="$UBOOT" of="$PADDED_UBOOT" bs=4M conv=sync
 	UBOOT_SIZE=`filesize "$PADDED_UBOOT" | xargs printf "0x%08x"`
   echo "UBOOT_SIZE=${UBOOT_SIZE}"
   echo "PADDED_UBOOT_SIZE=${PADDED_UBOOT_SIZE}"
@@ -94,7 +97,7 @@ prepare_uboot_script() {
 
 	echo "nand write $UBOOT_MEM_ADDR 0x800000 $PADDED_UBOOT_SIZE" >> "${UBOOT_SCRIPT_SRC}"
 	echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw earlyprintk ubi.mtd=4" >> "${UBOOT_SCRIPT_SRC}"
-	echo "setenv bootcmd 'if test -n \${fel_booted} && test -n \${scriptaddr}; then echo '(FEL boot)'; source \${scriptaddr}; fi; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> "${UBOOT_SCRIPT_SRC}"
+	echo "setenv bootcmd 'gpio set PB2; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo '(FEL boot)'; source \${scriptaddr}; fi; mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> "${UBOOT_SCRIPT_SRC}"
   echo "setenv fel_booted 0" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo Enabling Splash" >> "${UBOOT_SCRIPT_SRC}"
@@ -103,7 +106,11 @@ prepare_uboot_script() {
   echo "setenv splashpos m,m" >> "${UBOOT_SCRIPT_SRC}"
 
   echo "echo Configuring Video Mode"
-  echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> "${UBOOT_SCRIPT_SRC}"
+  if [[ "${POCKET_CHIP}" == "true" ]]; then
+    echo "setenv video-mode" >> "${UBOOT_SCRIPT_SRC}"
+  else
+    echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> "${UBOOT_SCRIPT_SRC}"
+  fi
 
   echo "saveenv" >> "${UBOOT_SCRIPT_SRC}"
 
