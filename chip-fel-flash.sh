@@ -131,7 +131,11 @@ prepare_uboot_script() {
     echo "echo " >>"${UBOOT_SCRIPT_SRC}"
     echo "echo *****************[ FLASHING DONE ]*****************" >>"${UBOOT_SCRIPT_SRC}"
     echo "echo " >>"${UBOOT_SCRIPT_SRC}"
-    echo "while true; do; sleep 10; done;" >>"${UBOOT_SCRIPT_SRC}"
+    if [[ "${METHOD}" == "fel" ]]; then
+      echo "reset"
+    else
+      echo "while true; do; sleep 10; done;" >>"${UBOOT_SCRIPT_SRC}"
+    fi
   fi
 
 	mkimage -A arm -T script -C none -n "flash CHIP" -d "${UBOOT_SCRIPT_SRC}" "${UBOOT_SCRIPT}"
@@ -204,4 +208,13 @@ else
 	fi
 fi
 
+if [[ "${METHOD}" == "fel" ]]; then
+	if ! wait_for_linuxboot; then
+		echo "ERROR: could not flash":
+		rm -rf $(TMPDIR)
+		exit 1
+	else
+		${SCRIPTDIR}/verify.sh
+	fi
+fi
 rm -rf "${TMPDIR}"
