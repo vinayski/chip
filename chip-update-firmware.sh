@@ -149,11 +149,11 @@ cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
 
 BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo "ERROR: could not flash" && exit 1
 
-if ! wait_for_linuxboot; then
-  echo "ERROR: could not flash"
-  exit 1
-else
-  ${SCRIPTDIR}/verify.sh
-fi
+#if ! wait_for_linuxboot; then
+#  echo "ERROR: could not flash"
+#  exit 1
+#else
+#  ${SCRIPTDIR}/verify.sh
+#fi
 
 exit $?
