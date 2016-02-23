@@ -211,7 +211,7 @@ fi
 if [[ "${METHOD}" == "fel" ]]; then
 	if ! wait_for_linuxboot; then
 		echo "ERROR: could not flash":
-		rm -rf $(TMPDIR)
+		rm -rf ${TMPDIR}
 		exit 1
 	else
 		${SCRIPTDIR}/verify.sh
