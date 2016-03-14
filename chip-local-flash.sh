@@ -63,7 +63,7 @@ UBI_MEM_ADDR=0x4b000000
 
 UBI_SIZE=`filesize $UBI | xargs printf "0x%08x"`
 PAGE_SIZE=16384
-OOB_SIZE=1664
+OOB_SIZE=1280
 
 assert_error() {
 	ERR=$?
