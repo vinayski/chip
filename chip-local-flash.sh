@@ -8,21 +8,14 @@ source $SCRIPTDIR/common.sh
 ##############################################################
 #  main
 ##############################################################
-while getopts "flpu:" opt; do
+while getopts "fu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
       METHOD=fastboot
       ;;
-    l)
-      echo "factory mode remain in u-boot after flashing"
-      AFTER_FLASHING=loop
-      ;;
     u)
       BUILDROOT_OUTPUT_DIR="${OPTARG}"
-      ;;
-    p)
-      POCKET_CHIP=true
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
