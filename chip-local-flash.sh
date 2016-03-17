@@ -5,14 +5,31 @@ set -x
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
+BUILDROOT_OUTPUT_DIR=".new/firmware"
+FIRMWARE_DIR=".new/firmware"
+
+DL_METHOD=fel
+DL_FLAVOR=serv
+DL_DIST=rootfs
+DL_DIR=".dl"
+
 ##############################################################
 #  main
 ##############################################################
-while getopts "fu:" opt; do
+while getopts "fdnu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
+      DL_METHOD=fb
       METHOD=fastboot
+      ;;
+    d)
+      echo "desktop selected"
+      DL_FLAVOR=desk
+      ;;
+    n)
+      echo "next enabled"
+      DL_DIST=testing-rootfs
       ;;
     u)
       BUILDROOT_OUTPUT_DIR="${OPTARG}"
@@ -25,6 +42,42 @@ while getopts "fu:" opt; do
 done
 
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
+
+function require_directory {
+  if [[ ! -d "${1}" ]]; then
+      mkdir -p "${1}"
+  fi
+}
+
+function dl_check {
+	wget -O $DL_DIR/latest.md5\
+		opensource.nextthing.co/chippian/$DL_DIST/latest.md5
+
+	pushd $DL_DIR
+	if [[ $(cat latest.md5 | grep "`md5sum img-$DL_FLAVOR-$DL_METHOD.tar.gz`")\
+	 && -d "img-$DL_FLAVOR-$DL_METHOD/images" ]]; then
+		echo "Cached files located"
+		echo "Staging for flashing"
+		cp -R img-$DL_FLAVOR-$DL_METHOD/images ../$FIRMWARE_DIR/
+	else
+		echo "New image available"
+		rm -rf img-$DL_FLAVOR-$DL_METHOD*
+		
+		wget opensource.nextthing.co/chippian/$DL_DIST/img-$DL_FLAVOR-$DL_METHOD.tar.gz
+
+		echo "Extracting.."
+		tar -xf img-$DL_FLAVOR-$DL_METHOD.tar.gz
+		echo "Staging for flashing"
+		cp -R img-$DL_FLAVOR-$DL_METHOD/images ../$FIRMWARE_DIR/
+	fi
+	popd
+}
+
+
+require_directory "$FIRMWARE_DIR"
+require_directory "$DL_DIR"
+
+dl_check
 
 FEL=fel
 
