@@ -16,7 +16,7 @@ DL_DIR=".dl"
 ##############################################################
 #  main
 ##############################################################
-while getopts "fdnu:" opt; do
+while getopts "fdpnu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
@@ -26,6 +26,10 @@ while getopts "fdnu:" opt; do
     d)
       echo "desktop selected"
       DL_FLAVOR=desk
+      ;;
+    p)
+      echo "desktop selected"
+      DL_FLAVOR=pocket
       ;;
     n)
       echo "next enabled"
