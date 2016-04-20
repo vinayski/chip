@@ -31,6 +31,10 @@ while getopts "fdpnu:" opt; do
       echo "desktop selected"
       DL_FLAVOR=pocket
       ;;
+    h)
+      echo "desktop selected"
+      DL_FLAVOR=hdmi-fixture-rootfs
+      ;;
     n)
       echo "next enabled"
       DL_DIST=testing-rootfs
