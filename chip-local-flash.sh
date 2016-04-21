@@ -16,7 +16,7 @@ DL_DIR=".dl"
 ##############################################################
 #  main
 ##############################################################
-while getopts "fdpnu:" opt; do
+while getopts "fdphnu:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
