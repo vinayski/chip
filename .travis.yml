@@ -1,0 +1,35 @@
+language: cpp
+
+addons:
+   apt:
+      packages:
+      - build-essential
+      - git
+      - cmake
+      - unzip
+        #- device-tree-compiler
+        #- libncurses-dev
+      - libc6-i386
+      - lib32stdc++6
+      - lib32z1
+      - bc
+
+before_script:
+- pwd
+- ls
+- uname -a
+
+script:
+- make clean
+- make distclean
+- make chip_defconfig
+- make -s 
+
+after_script:
+- echo "done"
+
+notifications:
+  email:
+  - kaplan2539@gmail.com
+  on_success: change
+  on_failure: always
