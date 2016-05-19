@@ -4,18 +4,18 @@ set -x
 
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
+source $SCRIPTDIR/env.sh
+export AWS_DEFAULT_REGION=us-west-2
 
 BUILDROOT_OUTPUT_DIR=".new/firmware"
 FIRMWARE_DIR=".new/firmware"
 
 DL_METHOD=fel
+METHOD=fel
 DL_FLAVOR=serv
 DL_DIST=rootfs
 DL_DIR=".dl"
 
-##############################################################
-#  main
-##############################################################
 while getopts "fdphnu:" opt; do
   case $opt in
     f)
@@ -49,6 +49,10 @@ while getopts "fdphnu:" opt; do
   esac
 done
 
+if [[ "${DL_FLAVOR}" == "pocket" ]] && [[ "${DL_DIST}" == "testing-rootfs" ]]; then
+  DL_FLAVOR="pocket-next"
+fi
+
 echo "BUILDROOT_OUTPUT_DIR = $BUILDROOT_OUTPUT_DIR"
 
 function require_directory {
@@ -70,8 +74,12 @@ function dl_check {
 	else
 		echo "New image available"
 		rm -rf img-$DL_FLAVOR-$DL_METHOD*
-		
-		wget opensource.nextthing.co/chippian/$DL_DIST/img-$DL_FLAVOR-$DL_METHOD.tar.gz
+	
+    if [[ "${DL_FLAVOR}"=="pocket" || "${DL_FLAVOR}"=="pocket-next" ]]; then	
+		  aws s3 cp s3://opensource.nextthing.co/chippian/$DL_DIST/img-$DL_FLAVOR-$DL_METHOD.tar.gz . || exit 1
+    else
+		  wget opensource.nextthing.co/chippian/$DL_DIST/img-$DL_FLAVOR-$DL_METHOD.tar.gz|| exit 1
+    fi
 
 		echo "Extracting.."
 		tar -xf img-$DL_FLAVOR-$DL_METHOD.tar.gz
