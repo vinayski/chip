@@ -103,39 +103,57 @@ S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
 
 
 
-if [[ ! -z "$BUILD" ]]; then
-  case "${WHAT}" in
-    "buildroot")
-      if [[ "$BUILD" -lt "74" ]] && [[ "${BRANCH}" == "stable" ]]; then
-            ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-            exit 0
-      fi
-      if [[ "$BUILD" -lt "60" ]] && [[ "${BRANCH}" == "next" ]]; then
-            ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-            exit 0
-      fi
-    ;;
-    "debian")
-      if [[ "$BUILD" -lt "47" ]] && [[ "${BRANCH}" == "stable" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "148" ]] && [[ "${BRANCH}" == "next" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "4" ]] && [[ "${BRANCH}" == "stable-gui" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "148" ]] && [[ "${BRANCH}" == "next-gui" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-    ;;
-  esac
+if [[ -z "$BUILD" ]]; then
+  ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
+  if [[ -z "${ROOTFS_URL}" ]]; then
+    echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
+    exit 1
+  fi
 else
   ROOTFS_URL="${S3_URL%latest}$BUILD"
 fi
+
+case "${WHAT}" in
+  "buildroot")
+    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
+    BUILD=${BR_BUILD}
+    ROOTFS_URL="${ROOTFS_URL}/images"
+    BR_URL="${ROOTFS_URL}"
+    ;;
+  "debian")
+    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
+    BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
+    BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
+    ;;
+  "pocketchip")
+    BR_BUILD=123
+    BUILD=123
+    ROOTFS_URL="http://opensource.nextthing.co/pocketchip"
+    BR_URL="$ROOTFS_URL"
+    ;;
+esac 
+
+echo "ROOTFS_URL=${ROOTFS_URL}"
+echo "BUILD=${BUILD}"
+echo "BR_URL=${BR_URL}"
+echo "BR_BUILD=${BR_BUILD}"
+
+require_directory "${FW_IMAGE_DIR}"
+cache_download "${FW_IMAGE_DIR}" ${ROOTFS_URL} rootfs.ubi
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} sun5i-r8-chip.dtb
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl.bin
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl-with-ecc.bin
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} uboot-env.bin
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} zImage
+cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
+
+BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo "ERROR: could not flash" && exit 1
+
+#if ! wait_for_linuxboot; then
+#  echo "ERROR: could not flash"
+#  exit 1
+#else
+#  ${SCRIPTDIR}/verify.sh
+#fi
 
 exit $?
