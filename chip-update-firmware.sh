@@ -1,92 +1,43 @@
 #!/bin/bash
 
+set -x
+
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
-if ! wait_for_fel; then
-  echo "ERROR: please jumper your CHIP in FEL mode then power on"
-  exit 1
-fi
+BUILDROOT_OUTPUT_DIR=".new/firmware"
+FIRMWARE_DIR=".new/firmware"
 
+DL_URL="http://opensource.nextthing.co/chip/images"
 
-FLASH_SCRIPT=./chip-fel-flash.sh
-WHAT=buildroot
+METHOD=fel
+FLAVOR=buildroot
 BRANCH=stable
+DL_DIR=".dl"
 
-function require_directory {
-  if [[ ! -d "${1}" ]]; then
-    mkdir -p "${1}"
-  fi
-}
-
-function s3_md5 {
-  local URL=$1
-  curl -sLI $URL |grep ETag|sed -e 's/.*"\([a-fA-F0-9]\+\)["-]*.*/\1/;'
-}
-
-function cache_download {
-  local DEST_DIR=${1}
-  local SRC_URL=${2}
-  local FILE=${3}
-
-  if [[ -f "${DEST_DIR}/${FILE}" ]]; then
-    echo "${DEST_DIR}/${FILE} exists... comparing to ${SRC_URL}/${FILE}"
-    local S3_MD5=$(s3_md5 ${SRC_URL}/${FILE})
-    local MD5=$(md5sum ${DEST_DIR}/${FILE} | cut -d\  -f1)
-    echo "MD5: ${MD5}"
-    echo "S3_MD5: ${S3_MD5}"
-    if [[ "${S3_MD5}" != "${MD5}" ]]; then
-      echo "md5sum differs"
-      rm ${DEST_DIR}/${FILE}
-      if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
-        echo "download of ${SRC_URL}/${FILE} failed!"
-        exit $?
-      fi 
-    else
-      echo "file already downloaded"
-    fi
-  else
-    if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
-      echo "download of ${SRC_URL}/${FILE} failed!"
-      exit $?
-    fi 
-  fi
-}
-    
-
-while getopts "ufdpb:w:B:" opt; do
+while getopts "fsdpb:" opt; do
   case $opt in
-    u)
-      echo "updating cache"
-      if [[ -d "$FW_IMAGE_DIR" ]]; then
-        rm -rf $FW_IMAGE_DIR
-      fi
-      ;;
     f)
       echo "fastboot enabled"
-      FLASH_SCRIPT_OPTION="-f"
+      METHOD=fb
       ;;
-    B)
-      BUILD="$OPTARG"
-      echo "BUILD = ${BUILD}"
-      ;;
-    b)
-      BRANCH="$OPTARG"
-      echo "BRANCH = ${BRANCH}"
-      ;;
-    w)
-      WHAT="$OPTARG"
-      echo "WHAT = ${WHAT}"
+    s)
+      echo "server selected"
+      FLAVOR=serv
       ;;
     d)
-      echo "debian selected"
-      WHAT="debian"
+      echo "desktop selected"
+      METHOD=fb ##must fastboot
+      FLAVOR=desk
       ;;
     p)
-      echo "PocketC.H.I.P selected"
-      WHAT="pocketchip"
-      BUILD=123
-      FLASH_SCRIPT=./chip-fel-flash.sh -p
+      echo "pocketchip selected"
+      METHOD=fb ##must fastboot
+      FLAVOR=pocket
+      ;;
+    b)
+      echo "${BRANCH} branch selected"
+      BRANCH="$OPTARG"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -95,47 +46,138 @@ while getopts "ufdpb:w:B:" opt; do
   esac
 done
 
+function require_directory {
+  if [[ ! -d "${1}" ]]; then
+      mkdir -p "${1}"
+  fi
+}
 
-FW_DIR="$(pwd)/.firmware"
-FW_IMAGE_DIR="${FW_DIR}/images"
-BASE_URL="http://opensource.nextthing.co/chip"
-S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
+function dl_check {
+	CACHENUM=$(curl $DL_URL/$BRANCH/$FLAVOR/latest)
+	
+	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz" ]]; then
+		echo "New image available"
+		
+		rm -rf $BRANCH-$FLAVOR-$METHOD*
+		
+		echo "Downloading.."
+		pushd $DL_DIR
+		if ! wget -O $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz\
+		 $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/img-$FLAVOR-$METHOD.tar.gz; then
+			echo "download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed!"
+			exit $?
+		fi
+		
+		echo "Extracting.."
+		tar -xf $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz
+		mv img-* $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}
+		
+		echo "Staging for flashing"
+		cp -R $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}/images ../$FIRMWARE_DIR/
+		popd
+	else
+		pushd $DL_DIR
+		echo "Cached files located"
+		echo "Staging for flashing"
+		cp -R $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}/images ../$FIRMWARE_DIR/
+		popd
+	fi
+}
+
+FEL=fel
+
+METHOD=${METHOD:-fel}
+AFTER_FLASHING=${AFTER_FLASHING:-wait}
 
 
-
-if [[ ! -z "$BUILD" ]]; then
-  case "${WHAT}" in
-    "buildroot")
-      if [[ "$BUILD" -lt "74" ]] && [[ "${BRANCH}" == "stable" ]]; then
-            ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-            exit 0
-      fi
-      if [[ "$BUILD" -lt "60" ]] && [[ "${BRANCH}" == "next" ]]; then
-            ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-            exit 0
-      fi
-    ;;
-    "debian")
-      if [[ "$BUILD" -lt "47" ]] && [[ "${BRANCH}" == "stable" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "148" ]] && [[ "${BRANCH}" == "next" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "4" ]] && [[ "${BRANCH}" == "stable-gui" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-      if [[ "$BUILD" -lt "148" ]] && [[ "${BRANCH}" == "next-gui" ]]; then
-        ./chip-legacy-update.sh $@ || echo "ERROR: could not flash" && exit 1
-        exit 0
-      fi
-    ;;
-  esac
-else
-  ROOTFS_URL="${S3_URL%latest}$BUILD"
+NAND_ERASE_BB=false
+if [ "$1" == "erase-bb" ]; then
+	NAND_ERASE_BB=true
 fi
 
-exit $?
+PATH=$PATH:$BUILDROOT_OUTPUT_DIR/host/usr/bin
+PADDED_SPL="${BUILDROOT_OUTPUT_DIR}/images/sunxi-spl-with-ecc.bin"
+PADDED_SPL_SIZE=0
+UBOOT_SCRIPT="${BUILDROOT_OUTPUT_DIR}/images/uboot.scr"
+UBOOT_SCRIPT_MEM_ADDR=0x43100000
+SPL="$BUILDROOT_OUTPUT_DIR/images/sunxi-spl.bin"
+SPL_MEM_ADDR=0x43000000
+UBOOT="$BUILDROOT_OUTPUT_DIR/images/u-boot-dtb.bin"
+PADDED_UBOOT="$BUILDROOT_OUTPUT_DIR/images/padded-u-boot"
+UBOOT_MEM_ADDR=0x4a000000
+UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
+UBI_MEM_ADDR=0x4b000000
+
+assert_error() {
+	ERR=$?
+	ERRCODE=$1
+	if [ "${ERR}" != "0" ]; then
+		if [ -z "${ERR}" ]; then
+			exit ${ERR}
+		else
+			exit ${ERRCODE}
+		fi
+	fi
+}
+
+echo == preparing images ==
+require_directory "$FIRMWARE_DIR"
+require_directory "$DL_DIR"
+dl_check
+
+echo == upload the SPL to SRAM and execute it ==
+if ! wait_for_fel; then
+  echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
+fi
+${FEL} spl "${SPL}"
+assert_error 128
+
+sleep 1 # wait for DRAM initialization to complete
+
+echo == upload spl ==
+${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" || ( echo "ERROR: could not write ${PADDED_SPL}" && exit $? )
+assert_error 129
+
+echo == upload u-boot ==
+${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" || ( echo "ERROR: could not write ${PADDED_UBOOT}" && exit $? )
+assert_error 130
+
+echo == upload u-boot script ==
+${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}" || ( echo "ERROR: could not write ${UBOOT_SCRIPT}" && exit $? )
+assert_error 131
+
+if [[ "${METHOD}" == "fel" ]]; then
+	echo == upload ubi ==
+	${FEL} --progress write $UBI_MEM_ADDR "${UBI}"
+
+	echo == execute the main u-boot binary ==
+	${FEL} exe $UBOOT_MEM_ADDR
+
+	echo == write ubi ==
+else
+	echo == execute the main u-boot binary ==
+	${FEL} exe $UBOOT_MEM_ADDR
+	assert_error 132
+
+	echo == waiting for fastboot ==
+	if wait_for_fastboot; then
+		fastboot -i 0x1f3a -u flash UBI $UBI
+		assert_error 134
+
+		fastboot -i 0x1f3a continue
+		assert_error 135
+	else
+		exit 1
+	fi
+fi
+
+if [[ "${METHOD}" == "fel" ]]; then
+	if ! wait_for_linuxboot; then
+		echo "ERROR: could not flash":
+		exit 1
+	else
+		${SCRIPTDIR}/verify.sh
+	fi
+fi
+
+ 
