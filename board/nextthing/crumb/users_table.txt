@@ -1,0 +1,2 @@
+-       -1  sudo    -1  -       -           -
+crumb   -1  crumb   -1   =crumb /home/crumb  /bin/sh users,sudo   crumb user
