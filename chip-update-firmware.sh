@@ -14,8 +14,9 @@ METHOD=fel
 FLAVOR=buildroot
 BRANCH=stable
 DL_DIR=".dl"
+NO_LIM="lim"
 
-while getopts "fsdpb:" opt; do
+while getopts "fsdpb:l:" opt; do
   case $opt in
     f)
       echo "fastboot enabled"
@@ -36,8 +37,14 @@ while getopts "fsdpb:" opt; do
       FLAVOR=pocket
       ;;
     b)
-      echo "${BRANCH} branch selected"
       BRANCH="$OPTARG"
+      echo "${BRANCH} branch selected"
+      ;;
+    l)
+      LOC=1
+      BUILDROOT_OUTPUT_DIR="$OPTARG"
+      FIRMWARE_DIR="$OPTARG"
+      echo "${BUILDROOT_OUTPUT_DIR} directory selected"
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -120,10 +127,14 @@ assert_error() {
 	fi
 }
 
-echo == preparing images ==
-require_directory "$FIRMWARE_DIR"
-require_directory "$DL_DIR"
-dl_check
+if [[ -z $LOC ]]; then
+
+  echo == preparing images ==
+  require_directory "$FIRMWARE_DIR"
+  require_directory "$DL_DIR"
+  dl_check
+
+fi
 
 echo == upload the SPL to SRAM and execute it ==
 if ! wait_for_fel; then
