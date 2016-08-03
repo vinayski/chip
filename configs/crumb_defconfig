@@ -1,7 +1,6 @@
 BR2_arm=y
 BR2_cortex_a8=y
 BR2_ARM_EABIHF=y
-BR2_DL_DIR="$(TOPDIR)/dl"
 BR2_BACKUP_SITE="http://sources.buildroot.net/"
 BR2_KERNEL_MIRROR="http://www.kernel.org/pub/"
 BR2_LUAROCKS_MIRROR="http://luarocks.org/repositories/rocks"
@@ -19,7 +18,7 @@ BR2_ROOTFS_OVERLAY="$(TOPDIR)/board/nextthing/crumb/overlay"
 BR2_ROOTFS_POST_BUILD_SCRIPT="$(TOPDIR)/board/nextthing/crumb/post-build.sh"
 BR2_LINUX_KERNEL=y
 BR2_LINUX_KERNEL_CUSTOM_GIT=y
-BR2_LINUX_KERNEL_CUSTOM_REPO_URL="file:///home/jason/Projects/nextthing/crumb/CRUMB-linux"
+BR2_LINUX_KERNEL_CUSTOM_REPO_URL="git@github.com:NextThingCo/CRUMB-linux.git"
 BR2_LINUX_KERNEL_CUSTOM_REPO_VERSION="nextthing/4.4/gr8-crumb"
 BR2_LINUX_KERNEL_PATCH="wext_priv.patch"
 BR2_LINUX_KERNEL_USE_CUSTOM_CONFIG=y
