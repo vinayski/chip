@@ -58,7 +58,8 @@ wait_for_linuxboot() {
   local TIMEOUT=100
   echo -n "flashing...";
   for ((i=$TIMEOUT; i>0; i--)) {
-    if lsusb |grep -q "0525:a4a7"; then
+    if lsusb |grep -q "0525:a4a7" ||
+       lsusb |grep -q "0525:a4aa"; then
       echo "OK"
       return 0;
     fi
@@ -70,3 +71,21 @@ wait_for_linuxboot() {
   return 1
 }
 
+ready_to_roll() {
+
+  echo -e "\n\nFLASH VERIFICATION COMPLETE.\n\n"
+
+  echo "   #  #  #"
+  echo "  #########"
+  echo "###       ###"
+  echo "  # {#}   #"
+  echo "###  '\######"
+  echo "  #       #"
+  echo "###       ###"
+  echo "  ########"
+  echo "   #  #  #"
+
+  echo -e "\n\nCHIP is ready to roll!\n\n"
+
+  return 0
+}

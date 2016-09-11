@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -x
-
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
@@ -191,4 +189,4 @@ if [[ "${METHOD}" == "fel" ]]; then
 	fi
 fi
 
- 
+ready_to_roll
