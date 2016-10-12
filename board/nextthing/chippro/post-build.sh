@@ -12,7 +12,7 @@ BUILDROOT_GITHASH="${BUILDROOT_GITHASH:0:8}"
 BUILD="$(cat build)"
 
 cat <<EOF >${TARGET_DIR}/etc/issue
-Welcome to CRUMB Buildroot-${BRANCH} build ${BUILD} rev ${BUILDROOT_GITHASH}
+Welcome to CHIP Pro Buildroot-${BRANCH} build ${BUILD} rev ${BUILDROOT_GITHASH}
 
 CHIP Buildroot contains various open source software.
 
