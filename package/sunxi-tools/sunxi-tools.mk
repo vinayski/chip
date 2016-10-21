@@ -14,12 +14,16 @@ FEX2BIN = $(HOST_DIR)/usr/bin/fex2bin
 define HOST_SUNXI_TOOLS_BUILD_CMDS
 	$(HOST_MAKE_ENV) $(MAKE) CC="$(HOSTCC)" PREFIX=$(HOST_DIR)/usr \
 		EXTRA_CFLAGS="$(HOST_CFLAGS)" LDFLAGS="$(HOST_LDFLAGS)" \
-		-C $(@D) tools
+		-C $(@D)
+	$(HOST_MAKE_ENV) $(MAKE) CC="$(HOSTCC)" PREFIX=$(HOST_DIR)/usr \
+		EXTRA_CFLAGS="$(HOST_CFLAGS)" LDFLAGS="$(HOST_LDFLAGS)" \
+		-C $(@D) misc
 endef
 
 define HOST_SUNXI_TOOLS_INSTALL_CMDS
 	$(HOST_MAKE_ENV) $(MAKE) PREFIX=$(HOST_DIR)/usr \
-		-C $(@D) install-tools
+		-C $(@D) install
+	$(INSTALL) -D -m 0755 $(@D)/sunxi-* $(HOST_DIR)/usr/bin
 endef
 
 define SUNXI_TOOLS_BUILD_CMDS
