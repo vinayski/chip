@@ -4,8 +4,6 @@ set -x
 
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
-source $SCRIPTDIR/env.sh
-export AWS_DEFAULT_REGION=us-west-2
 
 BUILDROOT_OUTPUT_DIR=".new/firmware"
 FIRMWARE_DIR=".new/firmware"
@@ -76,7 +74,7 @@ function dl_check {
 		rm -rf img-$DL_FLAVOR-$DL_METHOD*
 	
     if [[ "${DL_FLAVOR}" == "pocket" || "${DL_FLAVOR}" == "pocket-next" ]]; then	
-		  aws s3 cp s3://opensource.nextthing.co/chippian/rootfs/img-$DL_FLAVOR-$DL_METHOD.tar.gz . || exit 1
+		  wget opensource.nextthing.co/chippian/rootfs/img-$DL_FLAVOR-$DL_METHOD.tar.gz|| exit 1
     else
 		  wget opensource.nextthing.co/chippian/$DL_DIST/img-$DL_FLAVOR-$DL_METHOD.tar.gz|| exit 1
     fi
