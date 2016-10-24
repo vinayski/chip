@@ -16,7 +16,7 @@ BR_NO_CHECK_HASH_FOR += $(RTL8723BS_BT_SOURCE)
 endif
 
 define RTL8723BS_BT_BUILD_CMDS
-	$(MAKE) -C $(@D) CC=$(TARGET_CC)
+	$(MAKE) -C $(@D) CC="$(TARGET_CC)" rtk_hciattach
 endef
 
 define RTL8723BS_BT_INSTALL_INIT_SYSV
@@ -25,7 +25,7 @@ define RTL8723BS_BT_INSTALL_INIT_SYSV
 endef
 
 define RTL8723BS_BT_INSTALL_TARGET_CMDS
-	$(MAKE) -C $(@D) CC=$(TARGET_CC)\
+	$(MAKE) -C $(@D) CC="$(TARGET_CC)"\
 		PREFIX=$(TARGET_DIR) install
 endef
 
