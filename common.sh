@@ -67,6 +67,7 @@ wait_for_fel() {
   return 1
 }
 
+#------------------------------------------------------------
 detect_nand() {
   local tmpdir=`mktemp -d -t chip-uboot-script-XXXXXX`
   local ubootcmds=$tmpdir/uboot.cmds
@@ -79,6 +80,7 @@ reset" > $ubootcmds
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
+    exit 1
   fi
 
   $FEL spl $IMAGESDIR/sunxi-spl.bin
@@ -91,6 +93,7 @@ reset" > $ubootcmds
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
+    exit 1
   fi
 
   $FEL read 0x7c00 0x100 $tmpdir/nand-info
@@ -104,6 +107,7 @@ reset" > $ubootcmds
   rm -rf $tmpdir
 }
 
+#------------------------------------------------------------
 flash_images() {
   local tmpdir=`mktemp -d -t chip-uboot-script-XXXXXX`
   local ubootcmds=$tmpdir/uboot.cmds
@@ -148,6 +152,7 @@ flash_images() {
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
+    exit 1
   fi
 
   $FEL spl $IMAGESDIR/sunxi-spl.bin
@@ -186,6 +191,7 @@ wait_for_linuxboot() {
   return 1
 }
 
+#------------------------------------------------------------
 ready_to_roll() {
 
   echo -e "\n\nFLASH VERIFICATION COMPLETE.\n\n"

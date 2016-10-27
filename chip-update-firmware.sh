@@ -8,6 +8,8 @@ IMAGESDIR=".new/firmware/images"
 
 DL_URL="http://opensource.nextthing.co/chip/images"
 
+WGET="wget -q --show-progress"
+
 FLAVOR=server
 BRANCH=stable
 
@@ -26,28 +28,28 @@ UBI_TYPE="400000-4000"
 while getopts "sgpbhB:" opt; do
   case $opt in
     s)
-      echo "server selected"
+      echo "== Server selected =="
       FLAVOR=server
       ;;
     g)
-      echo "gui selected"
+      echo "== Gui selected =="
       FLAVOR=gui
       ;;
     p)
-      echo "pocketchip selected"
+      echo "== Pocketchip selected =="
       FLAVOR=pocketchip
       ;;
     b)
-      echo "buildroot selected"
+      echo "== Buildroot selected =="
       FLAVOR=buildroot
       ;;
     B)
       BRANCH="$OPTARG"
-      echo "${BRANCH} branch selected"
+      echo "== ${BRANCH} branch selected =="
       ;;
     h)
       echo ""
-      echo "Help"
+      echo "== help =="
       echo ""
       echo "  -s  --  Server             [Debian + Headless]"
       echo "  -g  --  GUI                [Debian + XFCE]"
@@ -59,7 +61,7 @@ while getopts "sgpbhB:" opt; do
       exit 0
       ;;
     \?)
-      echo "Invalid option: -$OPTARG" >&2
+      echo "== Invalid option: -$OPTARG ==" >&2
       exit 1
       ;;
   esac
@@ -73,43 +75,44 @@ function require_directory {
 
 function dl_probe {
 	
-	CACHENUM=$(curl $DL_URL/$BRANCH/$FLAVOR/latest)
+	CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
 	
 	if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
-		echo "New image available"
+		echo "== New image available =="
 		
 		rm -rf $DL_DIR/$BRANCH-$FLAVOR*
 		
 		mkdir -p $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
-		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
+		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
 		
-		echo "Downloading.."
+		echo "== Downloading.. =="
 		for FILE in ${PROBES[@]}; do
-			if ! wget $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
-				echo "download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed!"
+			if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
+				echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
 				exit $?
 			fi
 		done
-		popd
+		popd > /dev/null
 	else
-		echo "Cached probe files located"
+		echo "== Cached probe files located =="
 	fi
 	
-	echo "Staging for NAND probe"
+	echo "== Staging for NAND probe =="
 	ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
-	rm ${IMAGESDIR}/ubi_type
+	if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
+	
 	detect_nand
 	
 	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
-		echo "Downloading new UBI, this will be cached for future flashes."
-		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
-		if ! wget $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
-			echo "download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed!"
+		echo "== Downloading new UBI, this will be cached for future flashes. =="
+		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
+		if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
+			echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
 			exit $?
 		fi
-		popd
+		popd > /dev/null
 	else
-		echo "Cached UBI located"
+		echo "== Cached UBI located =="
 	fi
 }
 
