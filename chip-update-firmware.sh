@@ -3,46 +3,60 @@
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
-BUILDROOT_OUTPUT_DIR=".new/firmware"
-FIRMWARE_DIR=".new/firmware"
+DL_DIR=".dl"
+IMAGESDIR=".new/firmware/images"
 
 DL_URL="http://opensource.nextthing.co/chip/images"
 
-METHOD=fel
-FLAVOR=buildroot
+FLAVOR=server
 BRANCH=stable
-DL_DIR=".dl"
-NO_LIM="lim"
 
-while getopts "fsdpb:l:" opt; do
+PROBES=(spl-40000-1000-100.bin
+ spl-400000-4000-500.bin
+ spl-400000-4000-680.bin
+ sunxi-spl.bin
+ u-boot-dtb.bin
+ uboot-40000.bin
+ uboot-400000.bin)
+
+UBI_PREFIX="chip"
+UBI_SUFFIX="ubi.sparse"
+UBI_TYPE="400000-4000"
+
+while getopts "sgpbhB:" opt; do
   case $opt in
-    f)
-      echo "fastboot enabled"
-      METHOD=fb
-      ;;
     s)
       echo "server selected"
-      FLAVOR=serv
+      FLAVOR=server
       ;;
-    d)
-      echo "desktop selected"
-      METHOD=fb ##must fastboot
-      FLAVOR=desk
+    g)
+      echo "gui selected"
+      FLAVOR=gui
       ;;
     p)
       echo "pocketchip selected"
-      METHOD=fb ##must fastboot
-      FLAVOR=pocket
+      FLAVOR=pocketchip
       ;;
     b)
+      echo "buildroot selected"
+      FLAVOR=buildroot
+      ;;
+    B)
       BRANCH="$OPTARG"
       echo "${BRANCH} branch selected"
       ;;
-    l)
-      LOC=1
-      BUILDROOT_OUTPUT_DIR="$OPTARG"
-      FIRMWARE_DIR="$OPTARG"
-      echo "${BUILDROOT_OUTPUT_DIR} directory selected"
+    h)
+      echo ""
+      echo "Help"
+      echo ""
+      echo "  -s  --  Server             [Debian + Headless]"
+      echo "  -g  --  GUI                [Debian + XFCE]"
+      echo "  -p  --  PocketCHIP"
+      echo "  -b  --  Buildroot"
+      echo "  -B  --  Branch(optional)   [eg. -B testing]"
+      echo ""
+      echo ""
+      exit 0
       ;;
     \?)
       echo "Invalid option: -$OPTARG" >&2
@@ -57,136 +71,55 @@ function require_directory {
   fi
 }
 
-function dl_check {
+function dl_probe {
+	
 	CACHENUM=$(curl $DL_URL/$BRANCH/$FLAVOR/latest)
 	
-	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz" ]]; then
+	if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
 		echo "New image available"
 		
-		rm -rf $BRANCH-$FLAVOR-$METHOD*
+		rm -rf $DL_DIR/$BRANCH-$FLAVOR*
+		
+		mkdir -p $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
+		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
 		
 		echo "Downloading.."
-		pushd $DL_DIR
-		if ! wget -O $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz\
-		 $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/img-$FLAVOR-$METHOD.tar.gz; then
+		for FILE in ${PROBES[@]}; do
+			if ! wget $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
+				echo "download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed!"
+				exit $?
+			fi
+		done
+		popd
+	else
+		echo "Cached probe files located"
+	fi
+	
+	echo "Staging for NAND probe"
+	ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
+	rm ${IMAGESDIR}/ubi_type
+	detect_nand
+	
+	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
+		echo "Downloading new UBI, this will be cached for future flashes."
+		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
+		if ! wget $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
 			echo "download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed!"
 			exit $?
 		fi
-		
-		echo "Extracting.."
-		tar -xf $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}.tar.gz
-		mv img-* $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}
-		
-		echo "Staging for flashing"
-		cp -R $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}/images ../$FIRMWARE_DIR/
 		popd
 	else
-		pushd $DL_DIR
-		echo "Cached files located"
-		echo "Staging for flashing"
-		cp -R $BRANCH-$FLAVOR-$METHOD-b${CACHENUM}/images ../$FIRMWARE_DIR/
-		popd
+		echo "Cached UBI located"
 	fi
 }
 
-FEL=fel
+echo == preparing images ==
+require_directory "$IMAGESDIR"
+rm -rf ${IMAGESDIR}
+require_directory "$DL_DIR"
+dl_probe
 
-METHOD=${METHOD:-fel}
-AFTER_FLASHING=${AFTER_FLASHING:-wait}
-
-
-NAND_ERASE_BB=false
-if [ "$1" == "erase-bb" ]; then
-	NAND_ERASE_BB=true
-fi
-
-PATH=$PATH:$BUILDROOT_OUTPUT_DIR/host/usr/bin
-PADDED_SPL="${BUILDROOT_OUTPUT_DIR}/images/sunxi-spl-with-ecc.bin"
-PADDED_SPL_SIZE=0
-UBOOT_SCRIPT="${BUILDROOT_OUTPUT_DIR}/images/uboot.scr"
-UBOOT_SCRIPT_MEM_ADDR=0x43100000
-SPL="$BUILDROOT_OUTPUT_DIR/images/sunxi-spl.bin"
-SPL_MEM_ADDR=0x43000000
-UBOOT="$BUILDROOT_OUTPUT_DIR/images/u-boot-dtb.bin"
-PADDED_UBOOT="$BUILDROOT_OUTPUT_DIR/images/padded-u-boot"
-UBOOT_MEM_ADDR=0x4a000000
-UBI="$BUILDROOT_OUTPUT_DIR/images/rootfs.ubi"
-UBI_MEM_ADDR=0x4b000000
-
-assert_error() {
-	ERR=$?
-	ERRCODE=$1
-	if [ "${ERR}" != "0" ]; then
-		if [ -z "${ERR}" ]; then
-			exit ${ERR}
-		else
-			exit ${ERRCODE}
-		fi
-	fi
-}
-
-if [[ -z $LOC ]]; then
-
-  echo == preparing images ==
-  require_directory "$FIRMWARE_DIR"
-  require_directory "$DL_DIR"
-  dl_check
-
-fi
-
-echo == upload the SPL to SRAM and execute it ==
-if ! wait_for_fel; then
-  echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-fi
-${FEL} spl "${SPL}"
-assert_error 128
-
-sleep 1 # wait for DRAM initialization to complete
-
-echo == upload spl ==
-${FEL} write $SPL_MEM_ADDR "${PADDED_SPL}" || ( echo "ERROR: could not write ${PADDED_SPL}" && exit $? )
-assert_error 129
-
-echo == upload u-boot ==
-${FEL} write $UBOOT_MEM_ADDR "${PADDED_UBOOT}" || ( echo "ERROR: could not write ${PADDED_UBOOT}" && exit $? )
-assert_error 130
-
-echo == upload u-boot script ==
-${FEL} write $UBOOT_SCRIPT_MEM_ADDR "${UBOOT_SCRIPT}" || ( echo "ERROR: could not write ${UBOOT_SCRIPT}" && exit $? )
-assert_error 131
-
-if [[ "${METHOD}" == "fel" ]]; then
-	echo == upload ubi ==
-	${FEL} --progress write $UBI_MEM_ADDR "${UBI}"
-
-	echo == execute the main u-boot binary ==
-	${FEL} exe $UBOOT_MEM_ADDR
-
-	echo == write ubi ==
-else
-	echo == execute the main u-boot binary ==
-	${FEL} exe $UBOOT_MEM_ADDR
-	assert_error 132
-
-	echo == waiting for fastboot ==
-	if wait_for_fastboot; then
-		fastboot -i 0x1f3a -u flash UBI $UBI
-		assert_error 134
-
-		fastboot -i 0x1f3a continue
-		assert_error 135
-	else
-		exit 1
-	fi
-fi
-
-if [[ "${METHOD}" == "fel" ]]; then
-	if ! wait_for_linuxboot; then
-		echo "ERROR: could not flash":
-		exit 1
-	else
-		${SCRIPTDIR}/verify.sh
-	fi
-fi
+flash_images
+rm ${IMAGESDIR}/ubi_type
 
 ready_to_roll
