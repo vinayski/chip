@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000"
 
-while getopts "sgpbhB:" opt; do
+while getopts "sgpbhB:N:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -46,6 +46,10 @@ while getopts "sgpbhB:" opt; do
     B)
       BRANCH="$OPTARG"
       echo "== ${BRANCH} branch selected =="
+      ;;
+    N)
+      CACHENUM="$OPTARG"
+      echo "== Build number ${CACHENUM} selected =="
       ;;
     h)
       echo ""
@@ -75,8 +79,10 @@ function require_directory {
 
 function dl_probe {
 	
-	CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
-	
+	if [ -z $CACHENUM ]; then
+		CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
+	fi
+
 	if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
 		echo "== New image available =="
 		
