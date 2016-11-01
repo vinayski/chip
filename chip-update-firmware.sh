@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000"
 
-while getopts "sgpbhB:N:" opt; do
+while getopts "sgpbhB:N:F:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -51,15 +51,21 @@ while getopts "sgpbhB:N:" opt; do
       CACHENUM="$OPTARG"
       echo "== Build number ${CACHENUM} selected =="
       ;;
+    F)
+      FORMAT="$OPTARG"
+      echo "== Format ${FORMAT} selected =="
+      ;;
     h)
       echo ""
-      echo "== help =="
+      echo "== Help =="
       echo ""
       echo "  -s  --  Server             [Debian + Headless]"
       echo "  -g  --  GUI                [Debian + XFCE]"
       echo "  -p  --  PocketCHIP"
       echo "  -b  --  Buildroot"
       echo "  -B  --  Branch(optional)   [eg. -B testing]"
+      echo "  -N  --  Build#(optional)   [eg. -N 150]"
+      echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
       echo ""
       echo ""
       exit 0
@@ -107,7 +113,34 @@ function dl_probe {
 	ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
 	if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
 	
-	detect_nand
+	if [ -z $FORMAT ]; then
+		detect_nand
+	else
+		case $FORMAT in
+    			"Hynix_8G_MLC")
+				export nand_erasesize=400000
+				export nand_oobsize=680
+				export nand_writesize=4000
+				UBI_TYPE="400000-4000"
+			;;
+    			"Toshiba_4G_MLC")
+				export nand_erasesize=400000
+				export nand_oobsize=500
+				export nand_writesize=4000
+				UBI_TYPE="400000-4000"
+			;;
+    			"Toshiba_512M_MLC")
+				export nand_erasesize=40000
+				export nand_oobsize=100
+				export nand_writesize=1000
+				UBI_TYPE="400000-1000"
+			;;
+			\?)
+      				echo "== Invalid format: $FORMAT ==" >&2
+      				exit 1
+      			;;
+  		esac
+	fi
 	
 	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
 		echo "== Downloading new UBI, this will be cached for future flashes. =="
