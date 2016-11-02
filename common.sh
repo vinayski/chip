@@ -136,7 +136,7 @@ flash_images() {
   echo "setenv splashpos m,m" >> $ubootcmds
 
   echo "echo Configuring Video Mode" >> $ubootcmds
-  if [ "$PLATFORM" = "PocketCHIP" ]; then
+  if [ "$FLAVOR" = "pocketchip" ]; then
     echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw ubi.mtd=4 quiet lpj=501248 loglevel=3 splash plymouth.ignore-serial-consoles" >> $ubootcmds
     echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
     echo "setenv bootcmd 'run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
@@ -157,7 +157,7 @@ flash_images() {
   echo "fastboot 0" >> $ubootcmds
   echo "reset" >> $ubootcmds
 
-  mkimage -A arm -T script -C none -n "flash $PLATFORM" -d $ubootcmds $ubootscr
+  mkimage -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"

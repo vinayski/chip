@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000"
 
-while getopts "sgpbhB:N:F:" opt; do
+while getopts "sgpbfhB:N:F:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -42,6 +42,10 @@ while getopts "sgpbhB:N:F:" opt; do
     b)
       echo "== Buildroot selected =="
       FLAVOR=buildroot
+      ;;
+    f)
+      echo "== Force clean and download =="
+      rm -rf .dl/ .new/
       ;;
     B)
       BRANCH="$OPTARG"
@@ -63,6 +67,7 @@ while getopts "sgpbhB:N:F:" opt; do
       echo "  -g  --  GUI                [Debian + XFCE]"
       echo "  -p  --  PocketCHIP"
       echo "  -b  --  Buildroot"
+      echo "  -f  --  Force clean"
       echo "  -B  --  Branch(optional)   [eg. -B testing]"
       echo "  -N  --  Build#(optional)   [eg. -N 150]"
       echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
@@ -85,74 +90,74 @@ function require_directory {
 
 function dl_probe {
 	
-	if [ -z $CACHENUM ]; then
-		CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
-	fi
+  if [ -z $CACHENUM ]; then
+    CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
+  fi
 
-	if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
-		echo "== New image available =="
-		
-		rm -rf $DL_DIR/$BRANCH-$FLAVOR*
-		
-		mkdir -p $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
-		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
-		
-		echo "== Downloading.. =="
-		for FILE in ${PROBES[@]}; do
-			if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
-				echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
-				exit $?
-			fi
-		done
-		popd > /dev/null
-	else
-		echo "== Cached probe files located =="
-	fi
+  if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
+    echo "== New image available =="
+
+    rm -rf $DL_DIR/$BRANCH-$FLAVOR*
+    
+    mkdir -p $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
+    pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
+    
+    echo "== Downloading.. =="
+    for FILE in ${PROBES[@]}; do
+      if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
+        echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
+        exit $?
+      fi
+    done
+    popd > /dev/null
+  else
+    echo "== Cached probe files located =="
+  fi
 	
-	echo "== Staging for NAND probe =="
-	ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
-	if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
+  echo "== Staging for NAND probe =="
+  ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
+  if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
+
+  if [ -z $FORMAT ]; then
+    detect_nand
+  else
+    case $FORMAT in
+      "Hynix_8G_MLC")
+        export nand_erasesize=400000
+        export nand_oobsize=680
+        export nand_writesize=4000
+        UBI_TYPE="400000-4000"
+      ;;
+      "Toshiba_4G_MLC")
+        export nand_erasesize=400000
+        export nand_oobsize=500
+        export nand_writesize=4000
+        UBI_TYPE="400000-4000"
+      ;;
+      "Toshiba_512M_MLC")
+        export nand_erasesize=40000
+        export nand_oobsize=100
+        export nand_writesize=1000
+        UBI_TYPE="400000-1000"
+      ;;
+      \?)
+    	echo "== Invalid format: $FORMAT ==" >&2
+    	exit 1
+    ;;
+    esac
+  fi
 	
-	if [ -z $FORMAT ]; then
-		detect_nand
-	else
-		case $FORMAT in
-    			"Hynix_8G_MLC")
-				export nand_erasesize=400000
-				export nand_oobsize=680
-				export nand_writesize=4000
-				UBI_TYPE="400000-4000"
-			;;
-    			"Toshiba_4G_MLC")
-				export nand_erasesize=400000
-				export nand_oobsize=500
-				export nand_writesize=4000
-				UBI_TYPE="400000-4000"
-			;;
-    			"Toshiba_512M_MLC")
-				export nand_erasesize=40000
-				export nand_oobsize=100
-				export nand_writesize=1000
-				UBI_TYPE="400000-1000"
-			;;
-			\?)
-      				echo "== Invalid format: $FORMAT ==" >&2
-      				exit 1
-      			;;
-  		esac
-	fi
-	
-	if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
-		echo "== Downloading new UBI, this will be cached for future flashes. =="
-		pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
-		if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
-			echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
-			exit $?
-		fi
-		popd > /dev/null
-	else
-		echo "== Cached UBI located =="
-	fi
+  if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
+    echo "== Downloading new UBI, this will be cached for future flashes. =="
+    pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
+    if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
+      echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
+    exit $?
+    fi
+    popd > /dev/null
+    else
+      echo "== Cached UBI located =="
+  fi
 }
 
 echo == preparing images ==
