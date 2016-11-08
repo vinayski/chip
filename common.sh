@@ -122,6 +122,7 @@ flash_images() {
     echo "nand erase.chip" > $ubootcmds
   fi
 
+  echo "env default -a" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x0 $pagespereb" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x400000 $pagespereb" >> $ubootcmds
   echo "nand write $UBOOTMEMADDR 0x800000 $ubootsize" >> $ubootcmds
@@ -137,6 +138,11 @@ flash_images() {
 
   echo "echo Configuring Video Mode" >> $ubootcmds
   if [ "$FLAVOR" = "pocketchip" ]; then
+  
+    echo "setenv clear_fastboot 'i2c mw 0x34 0x4 0x00 4;'" >> $ubootcmds
+    echo "setenv write_fastboot 'i2c mw 0x34 0x4 66 1; i2c mw 0x34 0x5 62 1; i2c mw 0x34 0x6 30 1; i2c mw 0x34 0x7 00 1'" >> $ubootcmds
+    echo "setenv test_fastboot 'i2c read 0x34 0x4 4 0x80200000; if itest.s *0x80200000 -eq fb0; then echo (Fastboot); i2c mw 0x34 0x4 0x00 4; fastboot 0; fi'" >> $ubootcmds
+
     echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw ubi.mtd=4 quiet lpj=501248 loglevel=3 splash plymouth.ignore-serial-consoles" >> $ubootcmds
     echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
     echo "setenv bootcmd 'run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
@@ -147,7 +153,17 @@ flash_images() {
     echo "setenv dip_overlay_dir /lib/firmware/nextthingco/chip/early" >> $ubootcmds
     echo "setenv dip_overlay_cmd 'if test -n \"\${dip_overlay_name}\"; then ubifsload \$dip_addr_r \$dip_overlay_dir/\$dip_overlay_name; fi'" >> $ubootcmds
     echo "setenv fel_booted 0" >> $ubootcmds
+    echo "setenv bootdelay 1" >> "${UBOOT_SCRIPT_SRC}"
   else
+
+    echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
+    echo "setenv bootcmd 'run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
+    echo "setenv boot_initrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload 0x44000000 /boot/initrd.uimage; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r 0x44000000 \$fdt_addr_r'" >> $ubootcmds
+    echo "setenv boot_noinitrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> $ubootcmds
+    echo "setenv dip_addr_r 0x43400000" >> $ubootcmds
+    echo "setenv dip_overlay_dir /lib/firmware/nextthingco/chip/early" >> $ubootcmds
+    echo "setenv dip_overlay_cmd 'if test -n \"\${dip_overlay_name}\"; then ubifsload \$dip_addr_r \$dip_overlay_dir/\$dip_overlay_name; fi'" >> $ubootcmds
+
     echo "setenv video-mode sunxi:640x480-24@60,monitor=composite-ntsc,overscan_x=40,overscan_y=20" >> $ubootcmds
   fi
 
