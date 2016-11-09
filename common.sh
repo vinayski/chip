@@ -122,7 +122,7 @@ flash_images() {
     echo "nand erase.chip" > $ubootcmds
   fi
 
-  echo "env default -a" >> $ubootcmds
+  ## echo "env default -a" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x0 $pagespereb" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x400000 $pagespereb" >> $ubootcmds
   echo "nand write $UBOOTMEMADDR 0x800000 $ubootsize" >> $ubootcmds
