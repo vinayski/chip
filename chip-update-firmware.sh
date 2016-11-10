@@ -167,6 +167,5 @@ require_directory "$DL_DIR"
 dl_probe
 
 flash_images
-rm ${IMAGESDIR}/ubi_type
 
 ready_to_roll
