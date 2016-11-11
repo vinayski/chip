@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000"
 
-while getopts "sgpbfhB:N:F:" opt; do
+while getopts "sgpbfnhB:N:F:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -46,6 +46,10 @@ while getopts "sgpbfhB:N:F:" opt; do
     f)
       echo "== Force clean and download =="
       rm -rf .dl/ .new/
+      ;;
+    n)
+      echo "== No Limit mode =="
+      NO_LIMIT="while itest.b *0x80400000 -ne 03; do i2c mw 0x34 0x30 0x03; i2c read 0x34 0x30 1 0x80400000; done; "
       ;;
     B)
       BRANCH="$OPTARG"

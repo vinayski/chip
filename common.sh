@@ -13,7 +13,7 @@ if [[ -z $(which $FEL) ]]; then
   echo "  Error: Unable to locate FEL utility."
   echo "  Install FEL with:"
   echo "  CHIP-SDK setup script      [github.com/NextThingCo/CHIP-SDK]"
-  echo "     - or build from source  [github.com/NextThingCo/sunxi-tools]"
+  echo "     - or build from source  [github.com/linux-sunxi/sunxi-tools]"
   exit 1
 fi
 
@@ -145,7 +145,7 @@ flash_images() {
 
     echo "setenv bootargs root=ubi0:rootfs rootfstype=ubifs rw ubi.mtd=4 quiet lpj=501248 loglevel=3 splash plymouth.ignore-serial-consoles" >> $ubootcmds
     echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
-    echo "setenv bootcmd 'run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
+    echo "setenv bootcmd '${NO_LIMIT}run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
     echo "setenv boot_initrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload 0x44000000 /boot/initrd.uimage; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r 0x44000000 \$fdt_addr_r'" >> $ubootcmds
     echo "setenv boot_noinitrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> $ubootcmds
     echo "setenv video-mode" >> $ubootcmds
@@ -157,7 +157,7 @@ flash_images() {
   else
 
     echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
-    echo "setenv bootcmd 'run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
+    echo "setenv bootcmd '${NO_LIMIT}run test_fastboot; if test -n \${fel_booted} && test -n \${scriptaddr}; then echo (FEL boot); source \${scriptaddr}; fi; for path in \${bootpaths}; do run boot_\$path; done'" >> $ubootcmds
     echo "setenv boot_initrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload 0x44000000 /boot/initrd.uimage; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r 0x44000000 \$fdt_addr_r'" >> $ubootcmds
     echo "setenv boot_noinitrd 'mtdparts; ubi part UBI; ubifsmount ubi0:rootfs; ubifsload \$fdt_addr_r /boot/sun5i-r8-chip.dtb; ubifsload \$kernel_addr_r /boot/zImage; bootz \$kernel_addr_r - \$fdt_addr_r'" >> $ubootcmds
     echo "setenv dip_addr_r 0x43400000" >> $ubootcmds
