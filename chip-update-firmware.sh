@@ -93,7 +93,7 @@ function require_directory {
 }
 
 function dl_probe {
-	
+
   if [ -z $CACHENUM ]; then
     CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
   fi
@@ -117,7 +117,7 @@ function dl_probe {
   else
     echo "== Cached probe files located =="
   fi
-	
+
   echo "== Staging for NAND probe =="
   ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
   if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
@@ -150,7 +150,7 @@ function dl_probe {
     ;;
     esac
   fi
-	
+
   if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
     echo "== Downloading new UBI, this will be cached for future flashes. =="
     pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
@@ -170,6 +170,14 @@ rm -rf ${IMAGESDIR}
 require_directory "$DL_DIR"
 dl_probe
 
-flash_images
-
-ready_to_roll
+##pass
+flash_images && ready_to_roll || (
+  ##fail
+  echo -e "\n FLASH VERIFICATION FAILED.\n\n"
+  echo -e "\tTROUBLESHOOTING:\n"
+  echo -e "\tIs the FEL pin connected to GND?"
+  echo -e "\tHave you tried turning it off and turning it on again?"
+  echo -e "\tDid you run the setup script in CHIP-SDK?"
+  echo -e "\tDownload could be corrupt, it can be re-downloaded by adding the '-f' flag."
+  echo -e "\n\n"
+)

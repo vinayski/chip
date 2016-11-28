@@ -109,6 +109,8 @@ reset" > $ubootcmds
 
 #------------------------------------------------------------
 flash_images() {
+  local RC=0
+
   local tmpdir=`mktemp -d -t chip-uboot-script-XXXXXX`
   local ubootcmds=$tmpdir/uboot.cmds
   local ubootscr=$tmpdir/uboot.scr
@@ -122,7 +124,6 @@ flash_images() {
     echo "nand erase.chip" > $ubootcmds
   fi
 
-  ## echo "env default -a" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x0 $pagespereb" >> $ubootcmds
   echo "nand write.raw.noverify $SPLMEMADDR 0x400000 $pagespereb" >> $ubootcmds
   echo "nand write $UBOOTMEMADDR 0x800000 $ubootsize" >> $ubootcmds
@@ -173,29 +174,32 @@ flash_images() {
   echo "fastboot 0" >> $ubootcmds
   echo "reset" >> $ubootcmds
 
-  mkimage -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr
+  mkimage -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr || RC=1
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-    exit 1
+    RC=1
   fi
 
-  $FEL spl $IMAGESDIR/sunxi-spl.bin
+  $FEL spl $IMAGESDIR/sunxi-spl.bin || RC=1
   # wait for DRAM initialization to complete
   sleep 1
 
-  $FEL write $UBOOTMEMADDR $IMAGESDIR/uboot-$nand_erasesize.bin
-  $FEL write $SPLMEMADDR $IMAGESDIR/spl-$nand_erasesize-$nand_writesize-$nand_oobsize.bin
-  $FEL write $UBOOTSCRMEMADDR $ubootscr
-  $FEL exe $UBOOTMEMADDR
+  $FEL write $UBOOTMEMADDR $IMAGESDIR/uboot-$nand_erasesize.bin || RC=1
+  $FEL write $SPLMEMADDR $IMAGESDIR/spl-$nand_erasesize-$nand_writesize-$nand_oobsize.bin || RC=1
+  $FEL write $UBOOTSCRMEMADDR $ubootscr || RC=1
+  $FEL exe $UBOOTMEMADDR || RC=1
 
   if wait_for_fastboot; then
-    fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize.ubi.sparse
+    fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize.ubi.sparse || RC=1
   else
     echo "failed to flash the UBI image"
+    RC=1
   fi
 
   rm -rf $tmpdir
+
+  return $RC
 }
 
 #------------------------------------------------------------
