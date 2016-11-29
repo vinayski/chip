@@ -159,7 +159,7 @@ flash_images() {
     echo "setenv dip_overlay_dir /lib/firmware/nextthingco/chip/early" >> $ubootcmds
     echo "setenv dip_overlay_cmd 'if test -n \"\${dip_overlay_name}\"; then ubifsload \$dip_addr_r \$dip_overlay_dir/\$dip_overlay_name; fi'" >> $ubootcmds
     echo "setenv fel_booted 0" >> $ubootcmds
-    echo "setenv bootdelay 1" >> "${UBOOT_SCRIPT_SRC}"
+    echo "setenv bootdelay 1" >> $ubootcmds
   else
 
     echo "setenv bootpaths 'initrd noinitrd'" >> $ubootcmds
