@@ -8,7 +8,7 @@ IMAGESDIR=".new/firmware/images"
 
 DL_URL="http://opensource.nextthing.co/chip/images"
 
-WGET="wget -q"
+WGET="wget"
 
 FLAVOR=server
 BRANCH=stable
