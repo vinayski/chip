@@ -8,7 +8,7 @@ IMAGESDIR=".new/firmware/images"
 
 DL_URL="http://opensource.nextthing.co/chip/images"
 
-WGET="wget -q --show-progress"
+WGET="wget -q"
 
 FLAVOR=server
 BRANCH=stable
@@ -168,7 +168,18 @@ echo == preparing images ==
 require_directory "$IMAGESDIR"
 rm -rf ${IMAGESDIR}
 require_directory "$DL_DIR"
-dl_probe
+
+##pass
+dl_probe || (
+  ##fail
+  echo -e "\n FLASH VERIFICATION FAILED.\n\n"
+  echo -e "\tTROUBLESHOOTING:\n"
+  echo -e "\tIs the FEL pin connected to GND?"
+  echo -e "\tHave you tried turning it off and turning it on again?"
+  echo -e "\tDid you run the setup script in CHIP-SDK?"
+  echo -e "\tDownload could be corrupt, it can be re-downloaded by adding the '-f' flag."
+  echo -e "\n\n"
+)
 
 ##pass
 flash_images && ready_to_roll || (
