@@ -179,6 +179,7 @@ dl_probe || (
   echo -e "\tDid you run the setup script in CHIP-SDK?"
   echo -e "\tDownload could be corrupt, it can be re-downloaded by adding the '-f' flag."
   echo -e "\n\n"
+  exit 1
 )
 
 ##pass
