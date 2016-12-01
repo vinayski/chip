@@ -23,7 +23,7 @@ PROBES=(spl-40000-1000-100.bin
 
 UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
-UBI_TYPE="400000-4000"
+UBI_TYPE="400000-4000-680"
 
 while getopts "sgpbfnhB:N:F:" opt; do
   case $opt in
@@ -130,19 +130,19 @@ function dl_probe {
         export nand_erasesize=400000
         export nand_oobsize=680
         export nand_writesize=4000
-        UBI_TYPE="400000-4000"
+        UBI_TYPE="400000-4000-680"
       ;;
       "Toshiba_4G_MLC")
         export nand_erasesize=400000
         export nand_oobsize=500
         export nand_writesize=4000
-        UBI_TYPE="400000-4000"
+        UBI_TYPE="400000-4000-500"
       ;;
       "Toshiba_512M_MLC")
         export nand_erasesize=40000
         export nand_oobsize=100
         export nand_writesize=1000
-        UBI_TYPE="400000-1000"
+        UBI_TYPE="400000-1000-100"
       ;;
       \?)
     	echo "== Invalid format: $FORMAT ==" >&2

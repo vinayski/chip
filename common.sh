@@ -103,7 +103,7 @@ reset" > $ubootcmds
 
   echo "NAND detected:"
   cat $tmpdir/nand-info || RC=1
-  UBI_TYPE="$(cat $tmpdir/nand-info | awk -F= '/erase/ {print $2}')-$(cat $tmpdir/nand-info | awk -F= '/write/ {print $2}')"
+  UBI_TYPE="$(cat $tmpdir/nand-info | awk -F= '/erase/ {print $2}')-$(cat $tmpdir/nand-info | awk -F= '/write/ {print $2}')-$(cat $tmpdir/nand-info | awk -F= '/oob/ {print $2}')"
   echo "${UBI_TYPE}" > $IMAGESDIR/ubi_type || RC=1
   source $tmpdir/nand-info || RC=1
 
@@ -196,7 +196,7 @@ flash_images() {
   $FEL exe $UBOOTMEMADDR || RC=1
 
   if wait_for_fastboot; then
-    fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize.ubi.sparse || RC=1
+    fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize-$nand_oobsize.ubi.sparse || RC=1
   else
     echo "failed to flash the UBI image"
     RC=1

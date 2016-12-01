@@ -22,10 +22,12 @@ prepare_ubi() {
   local eraseblocksize="$5"
   local pagesize="$6"
   local subpagesize="$7"
+  local oobsize="$8"
   local ebsize=`printf %x $eraseblocksize`
   local psize=`printf %x $pagesize`
-  local ubi=$outputdir/chip-$ebsize-$psize.ubi
-  local sparseubi=$outputdir/chip-$ebsize-$psize.ubi.sparse
+  local osize=`printf %x $oobsize`
+  local ubi=$outputdir/chip-$ebsize-$psize-$osize.ubi
+  local sparseubi=$outputdir/chip-$ebsize-$psize-$osize.ubi.sparse
   local mlcopts=""
 
   if [ -z $subpagesize ]; then
@@ -40,6 +42,17 @@ prepare_ubi() {
   else
     lebsize=$((eraseblocksize-pagesize*2))
   fi
+  
+  if [ "$oobsize" = "100" ]; then
+    #TOSH_512_SLC
+    volsize="448MiB"
+  elif [ "$oobsize" = "500" ]; then
+    #TOSH_4GB_MLC
+    volsize="3584MiB"
+  else
+    #HYNI_8GB_MLC
+    volsize="7168MiB"
+  fi
 
   mkdir -p $rootfs
   tar -xf $rootfstar -C $rootfs
@@ -47,11 +60,12 @@ prepare_ubi() {
   echo "[rootfs]
 mode=ubi
 vol_id=0
+vol_size=$volsize
 vol_type=dynamic
 vol_name=rootfs
 vol_alignment=1
-vol_flags=autoresize
 image=$ubifs" > $ubicfg
+
 
   ubinize -o $ubi -p $eraseblocksize -m $pagesize -s $subpagesize $mlcopts $ubicfg
   img2simg $ubi $sparseubi $eraseblocksize
@@ -118,9 +132,11 @@ cp $ROOTFSTAR $OUTPUTDIR/
 
 ## prepare ubi images ##
 # Toshiba SLC image:
-prepare_ubi $OUTPUTDIR $ROOTFSTAR "slc" 2048 262144 4096 1024
-# Toshiba/Hynix MLC image:
-prepare_ubi $OUTPUTDIR $ROOTFSTAR "mlc" 4096 4194304 16384 16384
+prepare_ubi $OUTPUTDIR $ROOTFSTAR "slc" 2048 262144 4096 1024 256
+# Toshiba MLC image:
+prepare_ubi $OUTPUTDIR $ROOTFSTAR "mlc" 4096 4194304 16384 16384 1280
+# Hynix MLC image:
+prepare_ubi $OUTPUTDIR $ROOTFSTAR "mlc" 4096 4194304 16384 16384 1664
 
 ## prepare spl images ##
 # Toshiba SLC image:
