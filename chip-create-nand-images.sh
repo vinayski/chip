@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 FEL=sunxi-fel
 
@@ -45,13 +45,13 @@ prepare_ubi() {
   
   if [ "$oobsize" = "100" ]; then
     #TOSH_512_SLC
-    volsize="448MiB"
+    volspec="vol_flags=autoresize"
   elif [ "$oobsize" = "500" ]; then
     #TOSH_4GB_MLC
-    volsize="3584MiB"
+    volspec="vol_size=3584MiB"
   else
     #HYNI_8GB_MLC
-    volsize="7168MiB"
+    volpec="vol_size=7168MiB"
   fi
 
   mkdir -p $rootfs
@@ -60,7 +60,7 @@ prepare_ubi() {
   echo "[rootfs]
 mode=ubi
 vol_id=0
-vol_size=$volsize
+$vol_spec
 vol_type=dynamic
 vol_name=rootfs
 vol_alignment=1
