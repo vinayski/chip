@@ -63,7 +63,7 @@ prepare_ubi() {
   echo "[rootfs]
 mode=ubi
 vol_id=0
-$vol_spec
+$volspec
 vol_type=dynamic
 vol_name=rootfs
 vol_alignment=1
