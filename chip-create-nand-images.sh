@@ -51,7 +51,7 @@ prepare_ubi() {
     volspec="vol_size=3584MiB"
   else
     #HYNI_8GB_MLC
-    volpec="vol_size=7168MiB"
+    volspec="vol_size=7168MiB"
   fi
 
   mkdir -p $rootfs
