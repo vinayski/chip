@@ -49,7 +49,7 @@ prepare_ubi() {
   elif [ "$osize" = "500" ]; then
     #TOSH_4GB_MLC
     volspec="vol_size=3584MiB"
-  elif [ "$osize" = "680" ];
+  elif [ "$osize" = "680" ]; then
     #HYNI_8GB_MLC
     volspec="vol_size=7168MiB"
   else
