@@ -49,9 +49,12 @@ prepare_ubi() {
   elif [ "$osize" = "500" ]; then
     #TOSH_4GB_MLC
     volspec="vol_size=3584MiB"
-  else
+  elif [ "$osize" = "680" ];
     #HYNI_8GB_MLC
     volspec="vol_size=7168MiB"
+  else
+	echo "Unable to acquire appropriate volume size or flags, quitting!"
+	exit 1
   fi
 
   mkdir -p $rootfs
