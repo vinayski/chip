@@ -43,10 +43,10 @@ prepare_ubi() {
     lebsize=$((eraseblocksize-pagesize*2))
   fi
   
-  if [ "$oobsize" = "100" ]; then
+  if [ "$osize" = "100" ]; then
     #TOSH_512_SLC
     volspec="vol_flags=autoresize"
-  elif [ "$oobsize" = "500" ]; then
+  elif [ "$osize" = "500" ]; then
     #TOSH_4GB_MLC
     volspec="vol_size=3584MiB"
   else
