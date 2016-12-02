@@ -118,7 +118,7 @@ flash_images() {
 
   local tmpdir=`mktemp -d -t chip-uboot-script-XXXXXX`
   local ubootcmds=$tmpdir/uboot.cmds
-  local ubootscr=$tmpdir/uboot.scr
+  local ubootscr=$IMAGESDIR/uboot.scr
   local ubootsize=`filesize $IMAGESDIR/uboot-$nand_erasesize.bin | xargs printf "0x%08x"`
   local pagespereb=`echo $((nand_erasesize/nand_writesize)) | xargs printf "%x"`
   local sparseubi=$tmpdir/ubi.sparse

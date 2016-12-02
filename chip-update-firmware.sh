@@ -72,6 +72,7 @@ while getopts "sgpbfnhB:N:F:" opt; do
       echo "  -p  --  PocketCHIP"
       echo "  -b  --  Buildroot"
       echo "  -f  --  Force clean"
+      echo "  -n  --  No limit           [enable greater power draw]"
       echo "  -B  --  Branch(optional)   [eg. -B testing]"
       echo "  -N  --  Build#(optional)   [eg. -N 150]"
       echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
