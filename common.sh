@@ -177,7 +177,12 @@ flash_images() {
 
   echo "echo going to fastboot mode" >> $ubootcmds
   echo "fastboot 0" >> $ubootcmds
-  echo "reset" >> $ubootcmds
+  
+  if [ -z $RESET_COMMAND ]; then
+    RESET_COMMAND="while true; do; sleep 10; done;"
+  fi
+  
+  echo "$RESET_COMMAND" >> $ubootcmds  
 
   mkimage -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr || RC=1
 
@@ -197,6 +202,7 @@ flash_images() {
 
   if wait_for_fastboot; then
     fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize-$nand_oobsize.ubi.sparse || RC=1
+    fastboot -i 0x1f3a continue > /dev/null
   else
     echo "failed to flash the UBI image"
     RC=1

@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000-680"
 
-while getopts "sgpbfnhB:N:F:" opt; do
+while getopts "sgpbfnrhB:N:F:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -51,6 +51,10 @@ while getopts "sgpbfnhB:N:F:" opt; do
       echo "== No Limit mode =="
       NO_LIMIT="while itest.b *0x80400000 -ne 03; do i2c mw 0x34 0x30 0x03; i2c read 0x34 0x30 1 0x80400000; done; "
       ;;
+    r)
+      echo "== Reset after flash =="
+      RESET_COMMAND="reset"
+      ;;
     B)
       BRANCH="$OPTARG"
       echo "== ${BRANCH} branch selected =="
@@ -73,6 +77,7 @@ while getopts "sgpbfnhB:N:F:" opt; do
       echo "  -b  --  Buildroot"
       echo "  -f  --  Force clean"
       echo "  -n  --  No limit           [enable greater power draw]"
+      echo "  -r  --  Reset              [reset device after flash]"
       echo "  -B  --  Branch(optional)   [eg. -B testing]"
       echo "  -N  --  Build#(optional)   [eg. -N 150]"
       echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
