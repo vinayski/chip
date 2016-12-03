@@ -13,7 +13,7 @@ pxefile_addr_r=0x43200000
 ramdisk_addr_r=0x43300000
 
 # DT Options
-fdtfile=sun5i-r8-chip.dtb
+fdtfile=ntc-gr8-crumb.dtb
 
 # NAND Options
 mtdids=nand0=sunxi-nand.0
