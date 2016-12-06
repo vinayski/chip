@@ -25,7 +25,7 @@ UBI_PREFIX="chip"
 UBI_SUFFIX="ubi.sparse"
 UBI_TYPE="400000-4000-680"
 
-while getopts "sgpbfnrhB:N:F:" opt; do
+while getopts "sgpbfnrhB:N:F:L:" opt; do
   case $opt in
     s)
       echo "== Server selected =="
@@ -67,6 +67,10 @@ while getopts "sgpbfnrhB:N:F:" opt; do
       FORMAT="$OPTARG"
       echo "== Format ${FORMAT} selected =="
       ;;
+    L)
+      LOCALDIR="$OPTARG"
+      echo "== Local directory '${LOCALDIR}' selected =="
+      ;;
     h)
       echo ""
       echo "== Help =="
@@ -81,6 +85,7 @@ while getopts "sgpbfnrhB:N:F:" opt; do
       echo "  -B  --  Branch(optional)   [eg. -B testing]"
       echo "  -N  --  Build#(optional)   [eg. -N 150]"
       echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
+      echo "  -L  --  Local (optional)   [eg. -L ../img/buildroot/]"
       echo ""
       echo ""
       exit 0
@@ -104,7 +109,7 @@ function dl_probe {
     CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
   fi
 
-  if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]]; then
+  if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]] && [[ -z $LOCALDIR ]]; then
     echo "== New image available =="
 
     rm -rf $DL_DIR/$BRANCH-$FLAVOR*
@@ -121,52 +126,64 @@ function dl_probe {
     done
     popd > /dev/null
   else
-    echo "== Cached probe files located =="
+    echo "== Local/cached probe files located =="
   fi
 
   echo "== Staging for NAND probe =="
-  ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
+  if [ -z LOCALDIR ];then
+    ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
+  else
+    ln -s ../../$LOCALDIR $IMAGESDIR
+  fi
+
   if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
 
   if [ -z $FORMAT ]; then
-    detect_nand
+    detect_nand || exit 1
   else
     case $FORMAT in
       "Hynix_8G_MLC")
         export nand_erasesize=400000
         export nand_oobsize=680
         export nand_writesize=4000
-        UBI_TYPE="400000-4000-680"
       ;;
       "Toshiba_4G_MLC")
         export nand_erasesize=400000
         export nand_oobsize=500
         export nand_writesize=4000
-        UBI_TYPE="400000-4000-500"
       ;;
       "Toshiba_512M_MLC")
         export nand_erasesize=40000
         export nand_oobsize=100
         export nand_writesize=1000
-        UBI_TYPE="400000-1000-100"
       ;;
       \?)
     	echo "== Invalid format: $FORMAT ==" >&2
     	exit 1
     ;;
     esac
+    UBI_TYPE="$nand_erasesize-$nand_writesize-$nand_oobsize"
   fi
 
-  if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
+  if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]] && [ -z $LOCALDIR ]; then
     echo "== Downloading new UBI, this will be cached for future flashes. =="
     pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
     if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
       echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
-    exit $?
+      exit $?
     fi
     popd > /dev/null
-    else
+  else
+    if [ -z $LOCALDIR ]; then
       echo "== Cached UBI located =="
+    else
+      if [[ ! -f "$IMAGESDIR/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
+        echo "Could not locate UBI files"
+        exit 1
+      else
+        echo "== Cached UBI located =="
+      fi
+    fi
   fi
 }
 

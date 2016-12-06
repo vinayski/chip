@@ -69,7 +69,6 @@ wait_for_fel() {
 
 #------------------------------------------------------------
 detect_nand() {
-  local RC=0
 
   local tmpdir=`mktemp -d -t chip-uboot-script-XXXXXX`
   local ubootcmds=$tmpdir/uboot.cmds
@@ -78,38 +77,37 @@ detect_nand() {
   echo "nand info
 env export -t -s 0x100 0x7c00 nand_erasesize nand_writesize nand_oobsize
 reset" > $ubootcmds
-  mkimage -A arm -T script -C none -n "detect NAND" -d $ubootcmds $ubootscr || RC=1
+  mkimage -A arm -T script -C none -n "detect NAND" -d $ubootcmds $ubootscr || return 1
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-    RC=1
-    exit 1
+    return 1
   fi
 
-  $FEL spl $IMAGESDIR/sunxi-spl.bin || RC=1
+  $FEL spl $IMAGESDIR/sunxi-spl.bin || return 1
   # wait for DRAM initialization to complete
   sleep 1
 
-  $FEL write $UBOOTMEMADDR $IMAGESDIR/u-boot-dtb.bin || RC=1
-  $FEL write $UBOOTSCRMEMADDR $ubootscr || RC=1
-  $FEL exe $UBOOTMEMADDR || RC=1
+  $FEL write $UBOOTMEMADDR $IMAGESDIR/u-boot-dtb.bin || return 1
+  $FEL write $UBOOTSCRMEMADDR $ubootscr || return 1
+  $FEL exe $UBOOTMEMADDR || return 1
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
-    exit 1
+    return 1
   fi
 
-  $FEL read 0x7c00 0x100 $tmpdir/nand-info || RC=1
+  $FEL read 0x7c00 0x100 $tmpdir/nand-info || return 1
 
   echo "NAND detected:"
-  cat $tmpdir/nand-info || RC=1
+  cat $tmpdir/nand-info || return 1
   UBI_TYPE="$(cat $tmpdir/nand-info | awk -F= '/erase/ {print $2}')-$(cat $tmpdir/nand-info | awk -F= '/write/ {print $2}')-$(cat $tmpdir/nand-info | awk -F= '/oob/ {print $2}')"
-  echo "${UBI_TYPE}" > $IMAGESDIR/ubi_type || RC=1
-  source $tmpdir/nand-info || RC=1
+  echo "${UBI_TYPE}" > $IMAGESDIR/ubi_type || return 1
+  source $tmpdir/nand-info || return 1
 
   rm -rf $tmpdir
 
-  return $RC
+  return 0
 }
 
 #------------------------------------------------------------
