@@ -130,7 +130,7 @@ function dl_probe {
   fi
 
   echo "== Staging for NAND probe =="
-  if [ -z LOCALDIR ];then
+  if [ -z $LOCALDIR ];then
     ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
   else
     ln -s ../../$LOCALDIR $IMAGESDIR
