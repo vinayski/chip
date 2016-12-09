@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -x
+
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
@@ -75,17 +77,17 @@ while getopts "sgpbfnrhB:N:F:L:" opt; do
       echo ""
       echo "== Help =="
       echo ""
-      echo "  -s  --  Server             [Debian + Headless]"
-      echo "  -g  --  GUI                [Debian + XFCE]"
-      echo "  -p  --  PocketCHIP"
-      echo "  -b  --  Buildroot"
-      echo "  -f  --  Force clean"
+      echo "  -s  --  Server             [Debian + Headless]        "
+      echo "  -g  --  GUI                [Debian + XFCE]            "
+      echo "  -p  --  PocketCHIP         [CHIP on the go!]          "
+      echo "  -b  --  Buildroot          [Tiny, but powerful]       "
+      echo "  -f  --  Force clean        [re-download if applicable]"
       echo "  -n  --  No limit           [enable greater power draw]"
-      echo "  -r  --  Reset              [reset device after flash]"
-      echo "  -B  --  Branch(optional)   [eg. -B testing]"
-      echo "  -N  --  Build#(optional)   [eg. -N 150]"
-      echo "  -F  --  Format(optional)   [eg. -F Toshiba_4G_MLC]"
-      echo "  -L  --  Local (optional)   [eg. -L ../img/buildroot/]"
+      echo "  -r  --  Reset              [reset device after flash] "
+      echo "  -B  --  Branch             [eg. -B testing]           "
+      echo "  -N  --  Build#             [eg. -N 150]               "
+      echo "  -F  --  Format             [eg. -F Toshiba_4G_MLC]    "
+      echo "  -L  --  Local              [eg. -L ../img/buildroot/] "
       echo ""
       echo ""
       exit 0
@@ -105,7 +107,7 @@ function require_directory {
 
 function dl_probe {
 
-  if [ -z $CACHENUM ]; then
+  if [ -z $CACHENUM ] && [ -z $LOCALDIR ]; then
     CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
   fi
 
@@ -143,6 +145,7 @@ function dl_probe {
   else
     case $FORMAT in
       "Hynix_8G_MLC")
+        echo hello
         export nand_erasesize=400000
         export nand_oobsize=680
         export nand_writesize=4000
@@ -152,17 +155,19 @@ function dl_probe {
         export nand_oobsize=500
         export nand_writesize=4000
       ;;
-      "Toshiba_512M_MLC")
+      "Toshiba_512M_SLC")
+        echo correct
         export nand_erasesize=40000
         export nand_oobsize=100
         export nand_writesize=1000
       ;;
-      \?)
-    	echo "== Invalid format: $FORMAT ==" >&2
+      *)
+    	echo "== Invalid format: $FORMAT =="
     	exit 1
-    ;;
+      ;;
     esac
     UBI_TYPE="$nand_erasesize-$nand_writesize-$nand_oobsize"
+    echo $UBI_TYPE > ${IMAGESDIR}/ubi_type
   fi
 
   if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]] && [ -z $LOCALDIR ]; then
