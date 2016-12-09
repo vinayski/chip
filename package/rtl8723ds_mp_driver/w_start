@@ -1,0 +1,17 @@
+#!/bin/sh
+
+execute() {
+  echo $@
+  $@
+}
+
+
+execute modprobe -r 8723ds
+execute modprobe 8723ds rtw_mp_mode=1
+execute echo 6 > /proc/net/rtl8723ds/log_level
+execute echo 5 > /proc/net/rtl8723ds/wlan0/odm/dbg_level
+execute echo 0x4000 > /proc/net/rtl8723ds/wlan0/odm/dbg_comp
+execute dmesg -n 4
+execute rfkill unblock all
+execute ifconfig wlan0 up
+execute iwpriv wlan0 mp_start

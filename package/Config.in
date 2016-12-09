@@ -1327,6 +1327,7 @@ endif
 	source "package/rtl8723bs_bt/Config.in"
 	source "package/rtl8723bs/Config.in"
 	source "package/rtl8723bs_mp_driver/Config.in"
+	source "package/rtl8723ds_mp_driver/Config.in"
 	source "package/rtorrent/Config.in"
 	source "package/rtptools/Config.in"
 	source "package/samba/Config.in"
