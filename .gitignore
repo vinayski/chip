@@ -1,1 +1,4 @@
 .firmware
+.dl
+.new
+env.sh

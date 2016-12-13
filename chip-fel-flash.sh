@@ -218,3 +218,6 @@ if [[ "${METHOD}" == "fel" ]]; then
 	fi
 fi
 rm -rf "${TMPDIR}"
+
+ready_to_roll
+

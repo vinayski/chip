@@ -3,157 +3,219 @@
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
 
-if ! wait_for_fel; then
-  echo "ERROR: please jumper your CHIP in FEL mode then power on"
-  exit 1
-fi
+DL_DIR=".dl"
+IMAGESDIR=".new/firmware/images"
 
+DL_URL="http://opensource.nextthing.co/chip/images"
 
-FLASH_SCRIPT=./chip-fel-flash.sh
-WHAT=buildroot
+WGET="wget"
+
+FLAVOR=server
 BRANCH=stable
 
-function require_directory {
-  if [[ ! -d "${1}" ]]; then
-    mkdir -p "${1}"
-  fi
-}
+PROBES=(spl-40000-1000-100.bin
+ spl-400000-4000-500.bin
+ spl-400000-4000-680.bin
+ sunxi-spl.bin
+ u-boot-dtb.bin
+ uboot-40000.bin
+ uboot-400000.bin)
 
-function s3_md5 {
-  local URL=$1
-  curl -sLI $URL |grep ETag|sed -e 's/.*"\([a-fA-F0-9]\+\)["-]*.*/\1/;'
-}
+UBI_PREFIX="chip"
+UBI_SUFFIX="ubi.sparse"
+UBI_TYPE="400000-4000-680"
 
-function cache_download {
-  local DEST_DIR=${1}
-  local SRC_URL=${2}
-  local FILE=${3}
-
-  if [[ -f "${DEST_DIR}/${FILE}" ]]; then
-    echo "${DEST_DIR}/${FILE} exists... comparing to ${SRC_URL}/${FILE}"
-    local S3_MD5=$(s3_md5 ${SRC_URL}/${FILE})
-    local MD5=$(md5sum ${DEST_DIR}/${FILE} | cut -d\  -f1)
-    echo "MD5: ${MD5}"
-    echo "S3_MD5: ${S3_MD5}"
-    if [[ "${S3_MD5}" != "${MD5}" ]]; then
-      echo "md5sum differs"
-      rm ${DEST_DIR}/${FILE}
-      if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
-        echo "download of ${SRC_URL}/${FILE} failed!"
-        exit $?
-      fi 
-    else
-      echo "file already downloaded"
-    fi
-  else
-    if ! wget -P "${FW_IMAGE_DIR}" "${SRC_URL}/${FILE}"; then
-      echo "download of ${SRC_URL}/${FILE} failed!"
-      exit $?
-    fi 
-  fi
-}
-    
-
-while getopts "ufdpb:w:B:" opt; do
+while getopts "sgpbfnrhB:N:F:L:" opt; do
   case $opt in
-    u)
-      echo "updating cache"
-      if [[ -d "$FW_IMAGE_DIR" ]]; then
-        rm -rf $FW_IMAGE_DIR
-      fi
+    s)
+      echo "== Server selected =="
+      FLAVOR=server
       ;;
-    f)
-      echo "fastboot enabled"
-      FLASH_SCRIPT_OPTION="-f"
-      ;;
-    B)
-      BUILD="$OPTARG"
-      echo "BUILD = ${BUILD}"
-      ;;
-    b)
-      BRANCH="$OPTARG"
-      echo "BRANCH = ${BRANCH}"
-      ;;
-    w)
-      WHAT="$OPTARG"
-      echo "WHAT = ${WHAT}"
-      ;;
-    d)
-      echo "debian selected"
-      WHAT="debian"
+    g)
+      echo "== Gui selected =="
+      FLAVOR=gui
       ;;
     p)
-      echo "PocketC.H.I.P selected"
-      WHAT="pocketchip"
-      BUILD=123
-      FLASH_SCRIPT=./chip-fel-flash.sh -p
+      echo "== Pocketchip selected =="
+      FLAVOR=pocketchip
+      ;;
+    b)
+      echo "== Buildroot selected =="
+      FLAVOR=buildroot
+      ;;
+    f)
+      echo "== Force clean and download =="
+      rm -rf .dl/ .new/
+      ;;
+    n)
+      echo "== No Limit mode =="
+      NO_LIMIT="while itest.b *0x80400000 -ne 03; do i2c mw 0x34 0x30 0x03; i2c read 0x34 0x30 1 0x80400000; done; "
+      ;;
+    r)
+      echo "== Reset after flash =="
+      RESET_COMMAND="reset"
+      ;;
+    B)
+      BRANCH="$OPTARG"
+      echo "== ${BRANCH} branch selected =="
+      ;;
+    N)
+      CACHENUM="$OPTARG"
+      echo "== Build number ${CACHENUM} selected =="
+      ;;
+    F)
+      FORMAT="$OPTARG"
+      echo "== Format ${FORMAT} selected =="
+      ;;
+    L)
+      LOCALDIR="$OPTARG"
+      echo "== Local directory '${LOCALDIR}' selected =="
+      ;;
+    h)
+      echo ""
+      echo "== Help =="
+      echo ""
+      echo "  -s  --  Server             [Debian + Headless]        "
+      echo "  -g  --  GUI                [Debian + XFCE]            "
+      echo "  -p  --  PocketCHIP         [CHIP on the go!]          "
+      echo "  -b  --  Buildroot          [Tiny, but powerful]       "
+      echo "  -f  --  Force clean        [re-download if applicable]"
+      echo "  -n  --  No limit           [enable greater power draw]"
+      echo "  -r  --  Reset              [reset device after flash] "
+      echo "  -B  --  Branch             [eg. -B testing]           "
+      echo "  -N  --  Build#             [eg. -N 150]               "
+      echo "  -F  --  Format             [eg. -F Toshiba_4G_MLC]    "
+      echo "  -L  --  Local              [eg. -L ../img/buildroot/] "
+      echo ""
+      echo ""
+      exit 0
       ;;
     \?)
-      echo "Invalid option: -$OPTARG" >&2
+      echo "== Invalid option: -$OPTARG ==" >&2
       exit 1
       ;;
   esac
 done
 
-
-FW_DIR="$(pwd)/.firmware"
-FW_IMAGE_DIR="${FW_DIR}/images"
-BASE_URL="http://opensource.nextthing.co/chip"
-S3_URL="${BASE_URL}/${WHAT}/${BRANCH}/latest"
-
-
-
-if [[ -z "$BUILD" ]]; then
-  ROOTFS_URL="$(wget -q -O- ${S3_URL})" || (echo "ERROR: cannot reach ${S3_URL}" && exit 1)
-  if [[ -z "${ROOTFS_URL}" ]]; then
-    echo "error: could not get URL for latest build from ${S3_URL} - check internet connection"
-    exit 1
+function require_directory {
+  if [[ ! -d "${1}" ]]; then
+      mkdir -p "${1}"
   fi
-else
-  ROOTFS_URL="${S3_URL%latest}$BUILD"
-fi
+}
 
-case "${WHAT}" in
-  "buildroot")
-    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
-    BUILD=${BR_BUILD}
-    ROOTFS_URL="${ROOTFS_URL}/images"
-    BR_URL="${ROOTFS_URL}"
-    ;;
-  "debian")
-    BR_BUILD="$(wget -q -O- ${ROOTFS_URL}/br_build)"
-    BR_URL="${BASE_URL}/buildroot/${BRANCH%-gui}/${BR_BUILD}/images"
-    BUILD="$(wget -q -O- ${ROOTFS_URL}/build)"
-    ;;
-  "pocketchip")
-    BR_BUILD=123
-    BUILD=123
-    ROOTFS_URL="http://opensource.nextthing.co/pocketchip"
-    BR_URL="$ROOTFS_URL"
-    ;;
-esac 
+function dl_probe {
 
-echo "ROOTFS_URL=${ROOTFS_URL}"
-echo "BUILD=${BUILD}"
-echo "BR_URL=${BR_URL}"
-echo "BR_BUILD=${BR_BUILD}"
+  if [ -z $CACHENUM ] && [ -z $LOCALDIR ]; then
+    CACHENUM=$(curl -s $DL_URL/$BRANCH/$FLAVOR/latest)
+  fi
 
-require_directory "${FW_IMAGE_DIR}"
-cache_download "${FW_IMAGE_DIR}" ${ROOTFS_URL} rootfs.ubi
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} sun5i-r8-chip.dtb
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl.bin
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} sunxi-spl-with-ecc.bin
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} uboot-env.bin
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} zImage
-cache_download "${FW_IMAGE_DIR}" ${BR_URL} u-boot-dtb.bin
+  if [[ ! -d "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}" ]] && [[ -z $LOCALDIR ]]; then
+    echo "== New image available =="
 
-BUILDROOT_OUTPUT_DIR="${FW_DIR}" ${FLASH_SCRIPT} ${FLASH_SCRIPT_OPTION} || echo "ERROR: could not flash" && exit 1
+    rm -rf $DL_DIR/$BRANCH-$FLAVOR*
+    
+    mkdir -p $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}
+    pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
+    
+    echo "== Downloading.. =="
+    for FILE in ${PROBES[@]}; do
+      if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$FILE; then
+        echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
+        exit $?
+      fi
+    done
+    popd > /dev/null
+  else
+    echo "== Local/cached probe files located =="
+  fi
 
-#if ! wait_for_linuxboot; then
-#  echo "ERROR: could not flash"
-#  exit 1
-#else
-#  ${SCRIPTDIR}/verify.sh
-#fi
+  echo "== Staging for NAND probe =="
+  if [ -z $LOCALDIR ];then
+    ln -s ../../$DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM}/ $IMAGESDIR
+  else
+    ln -s ../../$LOCALDIR $IMAGESDIR
+  fi
 
-exit $?
+  if [[ -f ${IMAGESDIR}/ubi_type ]]; then rm ${IMAGESDIR}/ubi_type; fi
+
+  if [ -z $FORMAT ]; then
+    detect_nand || exit 1
+  else
+    case $FORMAT in
+      "Hynix_8G_MLC")
+        echo hello
+        export nand_erasesize=400000
+        export nand_oobsize=680
+        export nand_writesize=4000
+      ;;
+      "Toshiba_4G_MLC")
+        export nand_erasesize=400000
+        export nand_oobsize=500
+        export nand_writesize=4000
+      ;;
+      "Toshiba_512M_SLC")
+        echo correct
+        export nand_erasesize=40000
+        export nand_oobsize=100
+        export nand_writesize=1000
+      ;;
+      *)
+    	echo "== Invalid format: $FORMAT =="
+    	exit 1
+      ;;
+    esac
+    UBI_TYPE="$nand_erasesize-$nand_writesize-$nand_oobsize"
+    echo $UBI_TYPE > ${IMAGESDIR}/ubi_type
+  fi
+
+  if [[ ! -f "$DL_DIR/$BRANCH-$FLAVOR-b${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]] && [ -z $LOCALDIR ]; then
+    echo "== Downloading new UBI, this will be cached for future flashes. =="
+    pushd $DL_DIR/${BRANCH}-${FLAVOR}-b${CACHENUM} > /dev/null
+    if ! $WGET $DL_URL/$BRANCH/$FLAVOR/${CACHENUM}/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX; then
+      echo "!! download of $BRANCH-$FLAVOR-$METHOD-b${CACHENUM} failed !!"
+      exit $?
+    fi
+    popd > /dev/null
+  else
+    if [ -z $LOCALDIR ]; then
+      echo "== Cached UBI located =="
+    else
+      if [[ ! -f "$IMAGESDIR/$UBI_PREFIX-$UBI_TYPE.$UBI_SUFFIX" ]]; then
+        echo "Could not locate UBI files"
+        exit 1
+      else
+        echo "== Cached UBI located =="
+      fi
+    fi
+  fi
+}
+
+echo == preparing images ==
+require_directory "$IMAGESDIR"
+rm -rf ${IMAGESDIR}
+require_directory "$DL_DIR"
+
+##pass
+dl_probe || (
+  ##fail
+  echo -e "\n FLASH VERIFICATION FAILED.\n\n"
+  echo -e "\tTROUBLESHOOTING:\n"
+  echo -e "\tIs the FEL pin connected to GND?"
+  echo -e "\tHave you tried turning it off and turning it on again?"
+  echo -e "\tDid you run the setup script in CHIP-SDK?"
+  echo -e "\tDownload could be corrupt, it can be re-downloaded by adding the '-f' flag."
+  echo -e "\n\n"
+  exit 1
+)
+
+##pass
+flash_images && ready_to_roll || (
+  ##fail
+  echo -e "\n FLASH VERIFICATION FAILED.\n\n"
+  echo -e "\tTROUBLESHOOTING:\n"
+  echo -e "\tIs the FEL pin connected to GND?"
+  echo -e "\tHave you tried turning it off and turning it on again?"
+  echo -e "\tDid you run the setup script in CHIP-SDK?"
+  echo -e "\tDownload could be corrupt, it can be re-downloaded by adding the '-f' flag."
+  echo -e "\n\n"
+)
