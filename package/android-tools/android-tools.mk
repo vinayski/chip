@@ -35,6 +35,11 @@ HOST_ANDROID_TOOLS_TARGETS += fastboot
 HOST_ANDROID_TOOLS_DEPENDENCIES += host-zlib host-libselinux
 endif
 
+ifeq ($(BR2_PACKAGE_HOST_ANDROID_TOOLS_FSUTILS),y)
+HOST_ANDROID_TOOLS_FSUTILS_BUILDTARGETS = ext4_utils
+HOST_ANDROID_TOOLS_FSUTILS_INSTALLTARGETS = ext2simg ext4fixup img2simg make_ext4fs simg2img simg2simg
+endif
+
 ifeq ($(BR2_PACKAGE_HOST_ANDROID_TOOLS_ADB),y)
 HOST_ANDROID_TOOLS_TARGETS += adb
 HOST_ANDROID_TOOLS_DEPENDENCIES += host-zlib host-openssl
@@ -43,6 +48,11 @@ endif
 ifeq ($(BR2_PACKAGE_ANDROID_TOOLS_FASTBOOT),y)
 ANDROID_TOOLS_TARGETS += fastboot
 ANDROID_TOOLS_DEPENDENCIES += zlib libselinux
+endif
+
+ifeq ($(BR2_PACKAGE_ANDROID_TOOLS_FSUTILS),y)
+ANDROID_TOOLS_FSUTILS_BUILDTARGETS = ext4_utils
+ANDROID_TOOLS_FSUTILS_INSTALLTARGETS = ext2simg ext4fixup img2simg make_ext4fs simg2img simg2simg
 endif
 
 ifeq ($(BR2_PACKAGE_ANDROID_TOOLS_ADB),y)
@@ -62,10 +72,20 @@ define HOST_ANDROID_TOOLS_BUILD_CMDS
 		mkdir -p $(@D)/build-$(t) && \
 		$(HOST_MAKE_ENV) $(HOST_CONFIGURE_OPTS) $(MAKE) SRCDIR=$(@D) \
 			-C $(@D)/build-$(t) -f $(@D)/debian/makefiles/$(t).mk$(sep))
+
+	$(foreach t,$(HOST_ANDROID_TOOLS_FSUTILS_BUILDTARGETS),\
+		mkdir -p $(@D)/build-$(t) && \
+		$(HOST_MAKE_ENV) $(HOST_CONFIGURE_OPTS) $(MAKE) SRCDIR=$(@D) \
+			-C $(@D)/build-$(t) -f $(@D)/debian/makefiles/$(t).mk$(sep))
 endef
 
 define ANDROID_TOOLS_BUILD_CMDS
 	$(foreach t,$(ANDROID_TOOLS_TARGETS),\
+		mkdir -p $(@D)/build-$(t) && \
+		$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) SRCDIR=$(@D) \
+			-C $(@D)/build-$(t) -f $(@D)/debian/makefiles/$(t).mk$(sep))
+
+	$(foreach t,$(ANDROID_TOOLS_FSUTILS_BUILDTARGETS),\
 		mkdir -p $(@D)/build-$(t) && \
 		$(TARGET_MAKE_ENV) $(TARGET_CONFIGURE_OPTS) $(MAKE) SRCDIR=$(@D) \
 			-C $(@D)/build-$(t) -f $(@D)/debian/makefiles/$(t).mk$(sep))
@@ -74,11 +94,17 @@ endef
 define HOST_ANDROID_TOOLS_INSTALL_CMDS
 	$(foreach t,$(HOST_ANDROID_TOOLS_TARGETS),\
 		$(INSTALL) -D -m 0755 $(@D)/build-$(t)/$(t) $(HOST_DIR)/usr/bin/$(t)$(sep))
+
+	$(foreach t,$(HOST_ANDROID_TOOLS_FSUTILS_INSTALLTARGETS),\
+		$(INSTALL) -D -m 0755 $(@D)/build-ext4_utils/$(t) $(HOST_DIR)/usr/bin/$(t)$(sep))
 endef
 
 define ANDROID_TOOLS_INSTALL_TARGET_CMDS
 	$(foreach t,$(ANDROID_TOOLS_TARGETS),\
 		$(INSTALL) -D -m 0755 $(@D)/build-$(t)/$(t) $(TARGET_DIR)/usr/bin/$(t)$(sep))
+
+	$(foreach t,$(ANDROID_TOOLS_FSUTILS_INSTALLTARGETS),\
+		$(INSTALL) -D -m 0755 $(@D)/build-ext4_utils/$(t) $(TARGET_DIR)/usr/bin/$(t)$(sep))
 endef
 
 $(eval $(host-generic-package))

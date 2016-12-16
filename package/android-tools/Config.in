@@ -55,6 +55,12 @@ comment "fastboot needs headers >= 3.10 (PowerPC64), headers >= 3.16 (MIPS64)"
 	depends on !BR2_arc
 	depends on !BR2_PACKAGE_ANDROID_TOOLS_FASTBOOT_GOOD_KERNEL_HEADERS
 
+config BR2_PACKAGE_ANDROID_TOOLS_FSUTILS
+        bool "fsutils"
+        help
+          This option will build and install the fsutils (aka ext4_utils) for
+          the host, i.e. img2simg & co.
+
 config BR2_PACKAGE_ANDROID_TOOLS_ADB
 	bool "adb"
 	depends on BR2_USE_MMU # uses fork()
