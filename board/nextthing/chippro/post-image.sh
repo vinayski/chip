@@ -14,4 +14,7 @@ ln -sf "spl-40000-1000-100.bin"     "flash-spl.bin"
 ln -sf "uboot-40000.bin"            "flash-uboot.bin"
 ln -sf "uboot-env-400000.bin"       "flash-uboot-env.bin"
 ln -sf "chip-40000-1000.ubi.sparse" "flash-rootfs.bin"
+
+cp "${BUILDROOT_DIR}/board/nextthing/chippro/flash.sh" "${IMAGES_DIR}/flash"
+
 popd
