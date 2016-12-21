@@ -1,9 +1,14 @@
-#!/bin/bash -x
-
-FEL=sunxi-fel
+#!/bin/bash
 
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 source $SCRIPTDIR/common.sh
+
+if [[ -z $(which ${MKFS_UBIFS}) ]]; then
+  echo "Could not find ${MKFS_UBIFS} in path."
+  echo "Install it with the CHIP-SDK setup script."
+  echo "You will also need to run this script as root."
+  exit 1
+fi
 
 UBOOTDIR="$1"
 ROOTFSTAR="$2"
@@ -59,7 +64,7 @@ prepare_ubi() {
 
   mkdir -p $rootfs
   tar -xf $rootfstar -C $rootfs
-  mkfs.ubifs -d $rootfs -m $pagesize -e $lebsize -c $maxlebcount -o $ubifs
+  ${MKFS_UBIFS} -d $rootfs -m $pagesize -e $lebsize -c $maxlebcount -o $ubifs
   echo "[rootfs]
 mode=ubi
 vol_id=0
@@ -93,7 +98,7 @@ prepare_spl() {
   local padding=$tmpdir/padding
   local splpadding=$tmpdir/nand-spl-padding
 
-  sunxi-nand-image-builder -c 64/1024 -p $pagesize -o $oobsize -u 1024 -e $eraseblocksize -b -s $spl $nandspl
+  ${SNIB} -c 64/1024 -p $pagesize -o $oobsize -u 1024 -e $eraseblocksize -b -s $spl $nandspl
 
   local splsize=`filesize $nandspl`
   local paddingsize=$((64-(splsize/(pagesize+oobsize))))
@@ -101,7 +106,7 @@ prepare_spl() {
 
   while [ $i -lt $repeat ]; do
     dd if=/dev/urandom of=$padding bs=1024 count=$paddingsize
-    sunxi-nand-image-builder -c 64/1024 -p $pagesize -o $oobsize -u 1024 -e $eraseblocksize -b -s $padding $splpadding
+    ${SNIB} -c 64/1024 -p $pagesize -o $oobsize -u 1024 -e $eraseblocksize -b -s $padding $splpadding
     cat $nandspl $splpadding > $nandpaddedspl
 
     if [ "$i" -eq "0" ]; then
