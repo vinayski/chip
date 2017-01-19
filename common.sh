@@ -1,7 +1,12 @@
 #!/bin/bash 
 
 TIMEOUT=30
-FEL=sunxi-fel
+FEL=${FEL:-sunxi-fel}
+FASTBOOT=${FASTBOOT:-fastboot}
+MKIMAGE=${MKIMAGE:-mkimage}
+MKFS_UBIFS=${MKFS_UBIFS:-mkfs.ubifs}
+SNIB=${SNIB:-sunxi-nand-image-builder}
+TOOLS=( ${FEL} ${FASTBOOT} ${MKIMAGE} ${SNIB})
 SPLMEMADDR=0x43000000
 UBOOTMEMADDR=0x4a000000
 UBOOTSCRMEMADDR=0x43100000
@@ -9,13 +14,14 @@ nand_erasesize=400000
 nand_writesize=4000
 nand_oobsize=680
 
-if [[ -z $(which $FEL) ]]; then
-  echo "  Error: Unable to locate FEL utility."
-  echo "  Install FEL with:"
-  echo "  CHIP-SDK setup script      [github.com/NextThingCo/CHIP-SDK]"
-  echo "     - or build from source  [github.com/linux-sunxi/sunxi-tools]"
-  exit 1
-fi
+for TOOL in ${TOOLS[@]}; do
+  if [[ -z $(which $TOOL) ]]; then
+    echo "  Error: Unable to locate $TOOL utility."
+    echo "  Install $TOOL with:"
+    echo "  CHIP-SDK setup script      [github.com/NextThingCo/CHIP-SDK]"
+    exit 1
+  fi
+done
 
 #------------------------------------------------------------
 onMac() {
@@ -39,7 +45,7 @@ filesize() {
 wait_for_fastboot() {
   echo -n "waiting for fastboot...";
   for ((i=$TIMEOUT; i>0; i--)) {
-    if [[ ! -z "$(fastboot -i 0x1f3a $@ devices)" ]]; then
+    if [[ ! -z "$(${FASTBOOT} -i 0x1f3a $@ devices)" ]]; then
       echo "OK";
       return 0;
     fi
@@ -77,7 +83,7 @@ detect_nand() {
   echo "nand info
 env export -t -s 0x100 0x7c00 nand_erasesize nand_writesize nand_oobsize
 reset" > $ubootcmds
-  mkimage -A arm -T script -C none -n "detect NAND" -d $ubootcmds $ubootscr || return 1
+  ${MKIMAGE} -A arm -T script -C none -n "detect NAND" -d $ubootcmds $ubootscr || return 1
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
@@ -188,7 +194,7 @@ flash_images() {
   
   echo "$RESET_COMMAND" >> $ubootcmds  
 
-  mkimage -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr || RC=1
+  ${MKIMAGE} -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr || RC=1
 
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
@@ -205,8 +211,8 @@ flash_images() {
   $FEL exe $UBOOTMEMADDR || RC=1
 
   if wait_for_fastboot; then
-    fastboot -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize-$nand_oobsize.ubi.sparse || RC=1
-    fastboot -i 0x1f3a continue > /dev/null
+    ${FASTBOOT} -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize-$nand_oobsize.ubi.sparse || RC=1
+    ${FASTBOOT} -i 0x1f3a continue > /dev/null
   else
     echo "failed to flash the UBI image"
     RC=1
