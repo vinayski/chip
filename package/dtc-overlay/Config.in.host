@@ -6,4 +6,4 @@ config BR2_PACKAGE_HOST_DTC_OVERLAY
 
 	  This version is patched to support device tree overlays.
 
-	  https://github.com/atenart/dtc
+	  https://github.com/NextThingCo/dtc
