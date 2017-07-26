@@ -44,9 +44,11 @@ filesize() {
 #------------------------------------------------------------
 wait_for_fastboot() {
   echo -n "waiting for fastboot...";
+  export FLASH_WAITING_FOR_DEVICE=1
   for ((i=$TIMEOUT; i>0; i--)) {
     if [[ ! -z "$(${FASTBOOT} -i 0x1f3a $@ devices)" ]]; then
       echo "OK";
+      unset FLASH_WAITING_FOR_DEVICE
       return 0;
     fi
     echo -n ".";
@@ -54,15 +56,18 @@ wait_for_fastboot() {
   }
 
   echo "TIMEOUT";
+  unset FLASH_WAITING_FOR_DEVICE
   return 1
 }
 
 #------------------------------------------------------------
 wait_for_fel() {
   echo -n "waiting for fel...";
+  export FLASH_WAITING_FOR_DEVICE=1
   for ((i=$TIMEOUT; i>0; i--)) {
     if ${FEL} $@ ver 2>/dev/null >/dev/null; then
       echo "OK"
+      unset FLASH_WAITING_FOR_DEVICE
       return 0;
     fi
     echo -n ".";
@@ -70,6 +75,7 @@ wait_for_fel() {
   }
 
   echo "TIMEOUT";
+  unset FLASH_WAITING_FOR_DEVICE
   return 1
 }
 
@@ -132,7 +138,7 @@ flash_images() {
   else
     echo "nand erase.chip" > $ubootcmds
   fi
-  
+
   if [ "$nand_oobsize" = "100" ];then
     DTB_NAME="ntc-gr8-crumb.dtb"
   else
@@ -187,15 +193,16 @@ flash_images() {
 
   echo "echo going to fastboot mode" >> $ubootcmds
   echo "fastboot 0" >> $ubootcmds
-  
+
   if [ -z $RESET_COMMAND ]; then
     RESET_COMMAND="while true; do; sleep 10; done;"
   fi
-  
-  echo "$RESET_COMMAND" >> $ubootcmds  
+
+  echo "$RESET_COMMAND" >> $ubootcmds
 
   ${MKIMAGE} -A arm -T script -C none -n "flash $FLAVOR" -d $ubootcmds $ubootscr || RC=1
 
+  export FLASH_VID_PID=1f3aefe8
   if ! wait_for_fel; then
     echo "ERROR: please make sure CHIP is connected and jumpered in FEL mode"
     RC=1
@@ -210,6 +217,7 @@ flash_images() {
   $FEL write $UBOOTSCRMEMADDR $ubootscr || RC=1
   $FEL exe $UBOOTMEMADDR || RC=1
 
+  export FLASH_VID_PID=1f3a1010
   if wait_for_fastboot; then
     ${FASTBOOT} -i 0x1f3a -u flash UBI $IMAGESDIR/chip-$nand_erasesize-$nand_writesize-$nand_oobsize.ubi.sparse || RC=1
     ${FASTBOOT} -i 0x1f3a continue > /dev/null
