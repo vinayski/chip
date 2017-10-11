@@ -5,7 +5,7 @@
 ################################################################################
 
 DTC_OVERLAY_VERSION = 61bbb7e7719959dc70917ae855398d278afa99c7
-DTC_OVERLAY_SITE = $(call github,atenart,dtc,$(DTC_OVERLAY_VERSION))
+DTC_OVERLAY_SITE = $(call github,NextThingCo,dtc,$(DTC_OVERLAY_VERSION))
 DTC_OVERLAY_LICENSE = GPLv2+/BSD-2c
 DTC_OVERLAY_LICENSE_FILES = README.license GPL
 DTC_OVERLAY_DEPENDENCIES = host-bison host-flex
