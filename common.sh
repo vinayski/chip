@@ -43,6 +43,8 @@ filesize() {
 
 #------------------------------------------------------------
 wait_for_fastboot() {
+  if [[ -v DONT_WAIT_FOR_STATE ]]; then return 0; fi
+
   echo -n "waiting for fastboot...";
   export FLASH_WAITING_FOR_DEVICE=1
   for ((i=$TIMEOUT; i>0; i--)) {
@@ -62,6 +64,8 @@ wait_for_fastboot() {
 
 #------------------------------------------------------------
 wait_for_fel() {
+  if [[ -v DONT_WAIT_FOR_STATE ]]; then return 0; fi
+
   echo -n "waiting for fel...";
   export FLASH_WAITING_FOR_DEVICE=1
   for ((i=$TIMEOUT; i>0; i--)) {
