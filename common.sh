@@ -14,14 +14,18 @@ nand_erasesize=400000
 nand_writesize=4000
 nand_oobsize=680
 
-for TOOL in ${TOOLS[@]}; do
-  if [[ -z $(which $TOOL) ]]; then
-    echo "  Error: Unable to locate $TOOL utility."
-    echo "  Install $TOOL with:"
-    echo "  CHIP-SDK setup script      [github.com/NextThingCo/CHIP-SDK]"
-    exit 1
-  fi
-done
+if [[ -z ${CHECK_DEPS} ]]; then
+  
+  for TOOL in ${TOOLS[@]}; do
+    if [[ -z $(which $TOOL) ]]; then
+      echo "  Error: Unable to locate $TOOL utility."
+      echo "  Install $TOOL with:"
+      echo "  CHIP-SDK setup script      [github.com/NextThingCo/CHIP-SDK]"
+      exit 1
+    fi
+  done
+  
+fi
 
 #------------------------------------------------------------
 onMac() {
