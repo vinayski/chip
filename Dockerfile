@@ -1,5 +1,18 @@
 FROM alpine:edge
 
+# Build-time metadata as defined at http://label-schema.org
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.name="e.g. Docker 4 C.H.I.P" \
+      org.label-schema.description="Docker image for C.H.I.P" \
+      org.label-schema.url="e.g. https://www.sankhe.com/" \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url="e.g. https://github.com/vinayski/chip" \
+      org.label-schema.vendor="e.g. Sankhe" \
+      org.label-schema.version=$VERSION \
+      org.label-schema.schema-version="1.0"
 MAINTAINER vinayski@gmail.com
 
 RUN echo "@testing http://nl.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories && \
