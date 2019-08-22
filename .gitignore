@@ -79,3 +79,8 @@ patches-*
 # cscope files
 cscope.*
 ncscope.*
+
+.firmware
+.dl
+.new
+env.sh
