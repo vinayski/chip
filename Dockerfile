@@ -42,7 +42,7 @@ WORKDIR /root
 RUN git clone \
   --single-branch --depth 1 --branch master \
   http://github.com/vinayski/chip && \
-RUN  cd chip/sunxi-tools && \
+  cd chip/sunxi-tools && \
      make && \
      make misc && \
      make install && \
