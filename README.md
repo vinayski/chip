@@ -1,10 +1,10 @@
-#Chip utils
+# Chip utils
 
 
-##Linux-specific
+## Linux-specific
 Linux requires permissions to write to C.H.I.P. when its plugged into your computer. Chrome (or Chromium) does not have these permissions, so you need to explicitly create them before you’ll be able to use the web flasher .
 
-###On Ubuntu:
+### On Ubuntu:
 
 
 ```

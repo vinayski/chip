@@ -41,7 +41,7 @@ ARG MTD_BRANCH=by/1.5.2/next-mlc-debian
 #RUN git clone \
 #  --single-branch --depth 1 --branch ${MTD_BRANCH} \
 #  http://github.com/nextthingco/chip-mtd-utils && \
-RUN  cd chip/chip-mtd-utils && \
+RUN  cd chip/CHIP-mtd-utils && \
      make && \
      make install && \
      cd ..
