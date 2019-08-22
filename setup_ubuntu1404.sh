@@ -72,29 +72,12 @@ for BIN in ${SUNXI_TOOLS[@]};do
 done
 popd
 
-git clone http://github.com/nextthingco/chip-mtd-utils
+git clone http://github.com/vinayski/chip
 pushd chip-mtd-utils
-git checkout by/1.5.2/next-mlc-debian
+cd chip/CHIP-mtd-utils
 make
 sudo make install
 popd
-
-echo -e "\n Installing CHIP-tools"
-if [ -d CHIP-tools ]; then
-  pushd CHIP-tools
-  git pull
-  popd
-fi
-git clone https://github.com/NextThingCo/CHIP-tools.git
-
-echo -e "\n Installing CHIP-buildroot"
-if [ ! -d CHIP-buildroot ]; then
-  git clone http://github.com/NextThingCo/CHIP-buildroot
-else
-  pushd CHIP-buildroot
-  git pull
-  popd
-fi
 
 if [ $(echo $PWD | grep vagrant) ];then
   sudo chown -R vagrant:vagrant *
