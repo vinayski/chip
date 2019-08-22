@@ -1,0 +1,45 @@
+From 782d83072b924e4963cccd0d4b32a13aa3e6d370 Mon Sep 17 00:00:00 2001
+From: Alex Kaplan <alex@nextthing.co>
+Date: Fri, 16 Dec 2016 00:12:58 +0000
+Subject: [PATCH] out of tree build of ext4_utils
+
+---
+ debian/makefiles/ext4_utils.mk | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/debian/makefiles/ext4_utils.mk b/debian/makefiles/ext4_utils.mk
+index cb64916..17ef2fa 100644
+--- a/debian/makefiles/ext4_utils.mk
++++ b/debian/makefiles/ext4_utils.mk
+@@ -1,6 +1,7 @@
+ # Makefile for ext4_utils; based on https://heiher.info/2227.html
+ # Author: Dmitrijs Ledkovs <xnox@ubuntu.com>
+ 
++VPATH+=$(SRCDIR)/extras/ext4_utils
+ SRCS+=make_ext4fs.c
+ SRCS+=ext4fixup.c
+ SRCS+=ext4_utils.c
+@@ -13,7 +14,7 @@ SRCS+=sha1.c
+ SRCS+=wipe.c
+ SRCS+=crc16.c
+ 
+-VPATH+=../../core/libsparse
++VPATH+=$(SRCDIR)/core/libsparse
+ SRCS+= backed_block.c
+ SRCS+= sparse_crc32.c
+ SRCS+= sparse.c
+@@ -33,8 +34,9 @@ SRCS+=simg2simg.c
+ 
+ CPPFLAGS+= -I.
+ CPPFLAGS+= -I/usr/include
+-CPPFLAGS+= -I../../core/include
+-CPPFLAGS+= -I../../core/libsparse/include/
++CPPFLAGS+= -I$(SRCDIR)/core/include
++CPPFLAGS+= -I$(SRCDIR)/core/libsparse/include/
++
+ 
+ LIBS+= -lz -lselinux
+ 
+-- 
+2.1.4
+
