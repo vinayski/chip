@@ -84,3 +84,5 @@ ncscope.*
 .dl
 .new
 env.sh
+
+.vagrant
