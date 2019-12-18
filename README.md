@@ -36,7 +36,7 @@ Installation of Git depends on your operating system:
 ### Clone the CHIP-SDK Git repository
 Assuming you have `git` in your PATH, open up a terminal and type:
 
-    git clone https://github.com/NextThingCo/CHIP-SDK
+    git clone https://github.com/vinayski/chip
 
 ### Start up the virtual machine
 
