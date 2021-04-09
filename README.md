@@ -1,4 +1,10 @@
 # CHIP-SDK
+
+<a href="https://scan.coverity.com/projects/vinayski-chip">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/22943/badge.svg"/>
+</a>
+
 Everything needed to develop software for C.H.I.P.
 
 While it is possible to install the SDK natively, currently the only supported way is to run it from a virtual machine.
